@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --bg:#05050a;
@@ -139,8 +140,9 @@
   .post .body{font-size:.92rem;line-height:1.55;color:var(--ink);white-space:pre-wrap}
   .post .media{
     margin-top:12px;border-radius:14px;overflow:hidden;position:relative;
-    aspect-ratio:16/9;
   }
+  .post .media img{width:100%;display:block;max-height:440px;object-fit:cover}
+  .post .media:has(.art){aspect-ratio:16/9}
   .post .media .art{position:absolute;inset:0}
   .post .media .tag{
     position:absolute;left:10px;bottom:10px;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
@@ -337,14 +339,13 @@
   <p class="sub">the dark network</p>
   <div class="login-card">
     <label for="handle">handle</label>
-    <input id="handle" type="text" placeholder="@you" value="@09xbkb" autocomplete="off">
+    <input id="handle" type="text" placeholder="@you" autocomplete="off" autocapitalize="off">
     <label for="pw">password</label>
-    <input id="pw" type="password" placeholder="••••••••" value="xynxnet">
+    <input id="pw" type="password" placeholder="••••••••">
     <button class="btn" id="enter-btn">enter the network</button>
-    <p class="alt">forgot it? <b id="gen-code">get an access code</b></p>
-    <div id="access-code">keep this somewhere safe. it's your way back in.<b id="code-val"></b></div>
+    <p class="alt">new here? same button makes your account</p>
   </div>
-  <p class="sub" style="margin-top:34px;font-size:.62rem">v1 preview · front end only · accounts go live later</p>
+  <p class="sub" style="margin-top:34px;font-size:.62rem">v1 · accounts live · posts persist for real</p>
 </section>
 
 <!-- ================= APP ================= -->
@@ -364,7 +365,7 @@
       <!-- FEED -->
       <section class="screen on" id="s-feed">
         <div class="composer-teaser" id="composer-teaser">
-          <div class="pfp" style="--a1:#8b5cf6;--a2:#22d3ee;--a3:#e879f9">0</div>
+          <div class="pfp" id="teaser-pfp" style="--a1:#8b5cf6;--a2:#22d3ee;--a3:#e879f9">·</div>
           drop something into the network…
         </div>
         <div id="feed"></div>
@@ -405,8 +406,8 @@
             <div class="pfp lg" style="--a1:#8b5cf6;--a2:#22d3ee;--a3:#e879f9">09</div>
             <button class="edit-btn" id="prof-theme-btn">themes</button>
           </div>
-          <h2>09X</h2>
-          <span class="handle">@09xbkb</span>
+          <h2 id="prof-name">you</h2>
+          <span class="handle" id="prof-handle">@you</span>
           <p class="bio">building the dark network. game dev, agent whisperer, night owl. everything i make lives at 09X.</p>
           <div class="prof-stats">
             <div><b>3</b> <span>posts</span></div>
@@ -433,7 +434,9 @@
     <h3>new post</h3>
     <textarea id="composer-text" placeholder="what's happening in your corner of the network?"></textarea>
     <div class="attach-row">
-      <button data-mock>📷 pic</button>
+      <button id="pic-btn">📷 pic</button>
+      <input type="file" id="pic-input" accept="image/*" hidden>
+      <span id="pic-name" style="font-size:.72rem;color:var(--faint);align-self:center"></span>
       <button data-mock>🎬 video</button>
       <button data-mock>⚡ short</button>
       <button data-mock>📍 place</button>
@@ -460,6 +463,14 @@
     <div class="theme-row" style="border:none">
       <div>dim mode<small>even darker, for 3am</small></div>
       <button class="toggle" id="tgl-dim"></button>
+    </div>
+    <div class="theme-row">
+      <div>access code<small>your way back in. guard it.</small></div>
+      <b id="my-code" style="font-family:'Space Grotesk',sans-serif;letter-spacing:.18em;font-size:.85rem"></b>
+    </div>
+    <div class="theme-row" style="border:none">
+      <div>session<small>you stay signed in on this device</small></div>
+      <button class="edit-btn" id="signout-btn">sign out</button>
     </div>
   </div>
 </div>
@@ -492,13 +503,85 @@ var people={
 };
 function pfp(p,cls){return '<div class="pfp '+(cls||'')+'" style="--a1:'+p.c[0]+';--a2:'+p.c[1]+';--a3:'+p.c[2]+'">'+p.init+'</div>'}
 
-var posts=[
-  {who:'xenius',time:'2m',text:'ops board is clean. every agent reporting in. the machine hums tonight.',likes:12,comments:3,media:{g:'linear-gradient(135deg,#1a0533,#3b1a78 45%,#0e3a5c)',tag:'visual'}},
-  {who:'nova',time:'26m',text:'okay the new shorts feed is actually dangerous. looked up and it was 2am',likes:48,comments:11},
-  {who:'zytros',time:'1h',text:'wiki entry #400 today. the grid remembers everything now. every world, every agent, every version.',likes:23,comments:5,media:{g:'linear-gradient(135deg,#062a3c,#0e3a5c 50%,#123)',tag:'clip · 0:42'}},
-  {who:'rift',time:'3h',text:'hot take: dark mode should be the ONLY mode. fight me in the comments',likes:97,comments:34},
-  {who:'nova',time:'5h',text:'posted the neon city run as a short. the drift at the end is criminal',likes:61,comments:9,media:{g:'linear-gradient(135deg,#5c1248,#e879f9 130%)',tag:'short · 0:17'}}
-];
+/* ---------- backend ---------- */
+var sb=supabase.createClient('https://yklwqghinvyhylsdrihp.supabase.co','sb_publishable_EBLJEpTurwp8U_LwhmAQmQ_h-HZFHcu');
+var me=null,myHandle='@you';
+var posts=[];
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function ago(ts){var s=(Date.now()-new Date(ts).getTime())/1000;if(s<60)return 'now';if(s<3600)return Math.floor(s/60)+'m';if(s<86400)return Math.floor(s/3600)+'h';return Math.floor(s/86400)+'d'}
+function loadFeed(){
+  sb.from('posts').select('*').order('created_at',{ascending:false}).limit(50).then(function(r){
+    if(r.error){toast('feed glitched: '+r.error.message);return}
+    posts=r.data||[];renderFeed();
+  });
+}
+function enterApp(u,silent){
+  me=u;var md=u.user_metadata||{};
+  myHandle=md.handle||('@'+(u.email||'you').split('@')[0]);
+  $('#login').style.display='none';$('#app').style.display='block';
+  $('#prof-name').textContent=myHandle.replace(/^@/,'');
+  $('#prof-handle').textContent=myHandle;
+  $('#my-code').textContent=md.access_code||'—';
+  $('#teaser-pfp').textContent=myHandle.replace(/^@/,'').slice(0,2);
+  loadFeed();
+  if(!silent)toast('welcome to the network, '+myHandle);
+}
+function doAuth(){
+  var h=$('#handle').value.trim().replace(/^@/,'');
+  var p=$('#pw').value;
+  if(!h){toast('pick a handle first');return}
+  if(p.length<6){toast('password needs 6+ characters');return}
+  var email=h.toLowerCase().replace(/[^a-z0-9._-]/g,'')+'@xynxnet.app';
+  toast('checking the network...');
+  sb.auth.signInWithPassword({email:email,password:p}).then(function(r){
+    if(!r.error){enterApp(r.data.user);return}
+    var code='';var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    for(var i=0;i<8;i++)code+=chars[Math.floor(Math.random()*chars.length)];
+    code=code.slice(0,4)+'-'+code.slice(4);
+    sb.auth.signUp({email:email,password:p,options:{data:{handle:'@'+h,access_code:code}}}).then(function(r2){
+      if(r2.error){toast(/already/i.test(r2.error.message)?'that handle is taken - wrong password?':r2.error.message);return}
+      var u=r2.data.user;
+      var uname=h.toLowerCase().replace(/[^a-z0-9._-]/g,'');
+      sb.from('profiles').update({username:uname,display_name:h}).eq('id',u.id).then(function(){
+        enterApp(u);
+        setTimeout(function(){toast('your access code: '+code+' - it lives in themes now')},1200);
+      });
+    });
+  });
+}
+function doPost(){
+  var v=$('#composer-text').value.trim();if(!v){toast('write something first');return}
+  if(!me){toast('sign in first');return}
+  var f=$('#pic-input').files[0];
+  toast('posting...');
+  var finish=function(url){
+    sb.from('posts').insert({author:me.id,handle:myHandle,text:v,media_url:url}).then(function(r){
+      if(r.error){toast('post failed: '+r.error.message);return}
+      $('#composer-text').value='';$('#pic-input').value='';$('#pic-name').textContent='';
+      $('#composer').classList.remove('on');loadFeed();
+      toast('posted. it lives on the network now');
+    });
+  };
+  if(f){
+    if(f.size>5*1024*1024){toast('keep pics under 5MB for now');return}
+    var ext=(f.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    var path=me.id+'/'+Date.now()+'.'+ext;
+    sb.storage.from('media').upload(path,f).then(function(r){
+      if(r.error){toast('upload failed: '+r.error.message);return}
+      finish(sb.storage.from('media').getPublicUrl(path).data.publicUrl);
+    });
+  } else finish(null);
+}
+function doLike(btn){
+  var art=btn.closest('.post');var pid=+art.dataset.pid;
+  var i=posts.findIndex(function(p){return p.id===pid});
+  if(i<0)return;
+  if(!me){toast('sign in to like');return}
+  var liked=!likedSet[pid];likedSet[pid]=liked;
+  var n=posts[i].likes+(liked?1:-1);if(n<0)n=0;
+  posts[i].likes=n;renderFeed();
+  sb.from('posts').update({likes:n}).eq('id',pid).then(function(r){if(r.error)toast('like did not stick') });
+}
 
 var shortsData=[
   {who:'nova',text:'neon city at 3am hits different. full run, no crashes 🌃',g:'linear-gradient(160deg,#12042b,#3b1a78 40%,#0e3a5c)',likes:'1.2k',comments:'84'},
@@ -525,21 +608,28 @@ var commsData=[
 
 /* ---------- render: feed ---------- */
 function postHTML(p,liked){
-  var per=people[p.who];
-  var m=p.media?'<div class="media"><div class="art" style="background:'+p.media.g+'"></div><span class="tag">'+p.media.tag+'</span></div>':'';
-  return '<article class="post">'
-    +'<div class="head">'+pfp(per)+'<div class="who"><b>'+per.name+'</b><span>'+per.handle+' · '+p.time+'</span></div></div>'
-    +'<div class="body">'+p.text+'</div>'+m
+  var name=esc(String(p.handle||'@ghost').replace(/^@/,''));
+  var hue=0;for(var k=0;k<name.length;k++)hue=(hue*31+name.charCodeAt(k))%360;
+  var per={init:esc((name.slice(0,2)||'?')),c:['hsl('+hue+',70%,55%)','hsl('+((hue+60)%360)+',70%,50%)','hsl('+((hue+300)%360)+',70%,60%)']};
+  var m=p.media_url?'<div class="media"><img src="'+esc(p.media_url)+'" alt="" loading="lazy"></div>':'';
+  return '<article class="post" data-pid="'+p.id+'">'
+    +'<div class="head">'+pfp(per)+'<div class="who"><b>'+name+'</b><span>'+esc(p.handle)+' · '+ago(p.created_at)+'</span></div></div>'
+    +'<div class="body">'+esc(p.text)+'</div>'+m
     +'<div class="foot">'
     +'<button class="like'+(liked?' liked':'')+'">'+(liked?'❤️':'🤍')+' <span>'+(p.likes+(liked?1:0))+'</span></button>'
-    +'<button data-mock>💬 <span>'+p.comments+'</span></button>'
+    +'<button data-mock>💬 <span>0</span></button>'
     +'<button data-mock>↗ share</button>'
     +'</div></article>';
 }
 var likedSet={};
 function renderFeed(){
-  $('#feed').innerHTML=posts.map(function(p,i){return postHTML(p,likedSet[i])}).join('');
-  $('#prof-feed').innerHTML=posts.slice(0,3).map(function(p,i){return postHTML(p,likedSet[i])}).join('');
+  var html=posts.length?posts.map(function(p){return postHTML(p,likedSet[p.id])}).join('')
+    :'<div class="post" style="text-align:center;color:var(--faint);padding:34px 18px">nothing here yet.<br>be the first real post on the network.</div>';
+  $('#feed').innerHTML=html;
+  var mine=posts.filter(function(p){return me&&p.author===me.id});
+  $('#prof-feed').innerHTML=mine.length?mine.slice(0,3).map(function(p){return postHTML(p,likedSet[p.id])}).join('')
+    :'<div class="post" style="text-align:center;color:var(--faint);padding:24px">your posts will live here</div>';
+  var ps=document.querySelector('.prof-stats b');if(ps)ps.textContent=mine.length;
 }
 
 /* ---------- render: shorts ---------- */
@@ -629,33 +719,22 @@ function setTheme(i){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-chat],[data-join],[data-theme],[data-mock],[data-close],.like,#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#bell-btn,#enter-btn,#gen-code,.toggle,#rail-post');
+  var t=e.target.closest('[data-tab],[data-chat],[data-join],[data-theme],[data-mock],[data-close],.like,#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#bell-btn,#enter-btn,#pic-btn,#signout-btn,.toggle,#rail-post');
   if(!t)return;
   if(t.dataset.tab)go(t.dataset.tab);
   else if(t.dataset.chat!==undefined)openConvo(+t.dataset.chat);
   else if(t.dataset.join!==undefined){var j=+t.dataset.join;joinedSet[j]=!joinedSet[j];renderComms();toast(joinedSet[j]?"you're in. welcome to "+commsData[j].name:'left '+commsData[j].name)}
   else if(t.dataset.theme!==undefined){setTheme(+t.dataset.theme);toast('theme applied. the network bends to you')}
-  else if(t.id==='enter-btn'){
-    if(!$('#handle').value.trim()){toast('pick a handle first');return}
-    $('#login').style.display='none';$('#app').style.display='block';toast('welcome to the network, '+$('#handle').value.trim());
-  }
-  else if(t.id==='gen-code'){
-    var code='';var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-    for(var i=0;i<8;i++)code+=chars[Math.floor(Math.random()*chars.length)];
-    $('#code-val').textContent=code.slice(0,4)+'-'+code.slice(4);
-    $('#access-code').style.display='block';
-  }
+  else if(t.id==='enter-btn')doAuth();
+  else if(t.id==='pic-btn')$('#pic-input').click();
+  else if(t.id==='signout-btn')sb.auth.signOut().then(function(){location.reload()});
   else if(t.id==='composer-teaser'||t.id==='rail-post')$('#composer').classList.add('on');
   else if(t.id==='theme-btn'||t.id==='prof-theme-btn')$('#themes').classList.add('on');
   else if(t.id==='bell-btn')toast('quiet for now. the network will call when it matters');
-  else if(t.id==='post-btn'){
-    var v=$('#composer-text').value.trim();if(!v){toast('write something first');return}
-    posts.unshift({who:'you',time:'now',text:v,likes:0,comments:0});
-    renderFeed();$('#composer-text').value='';$('#composer').classList.remove('on');toast('posted. the network sees you');
-  }
+  else if(t.id==='post-btn')doPost();
   else if(t.id==='msg-send')sendMsg();
   else if(t.id==='convo-back'){$('#chat-list').style.display='';$('#convo').style.display='none';openChat=null}
-  else if(t.classList.contains('like')){var idx=[].indexOf.call(document.querySelectorAll('#feed .post'),t.closest('.post'));likedSet[idx]=!likedSet[idx];renderFeed()}
+  else if(t.classList.contains('like'))doLike(t);
   else if(t.classList.contains('toggle')){
     t.classList.toggle('on');
     if(t.id==='tgl-stars')starOn=t.classList.contains('on');
@@ -666,9 +745,11 @@ document.addEventListener('click',function(e){
   else if(t.dataset.mock!==undefined)toast('coming online when the backend wakes up');
 });
 document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.activeElement===$('#msg-text'))sendMsg()});
+$('#pic-input').addEventListener('change',function(){$('#pic-name').textContent=this.files[0]?this.files[0].name:''});
 document.querySelectorAll('.modal').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('on')})});
 
 renderFeed();renderShorts();renderChats();renderComms();buildNav();renderSwatches();go('feed');
+sb.auth.getSession().then(function(r){if(r.data&&r.data.session)enterApp(r.data.session.user,true)});
 })();
 </script>
 </body>
