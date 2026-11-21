@@ -784,7 +784,7 @@ function postHTML(p,liked){
     +'<div class="head">'+pfp(per)+'<div class="who"><b>'+name+'</b><span>'+esc(p.handle)+' · '+ago(p.created_at)+'</span></div></div>'
     +'<div class="body">'+esc(p.text)+'</div>'+m
     +'<div class="foot">'
-    +'<button class="like'+(liked?' liked':'')+'" data-like="'+p.id+'">'+(liked?'❤️':'🤍')+' <span>'+(p.likes+(liked?1:0))+'</span></button>'
+    +'<button class="like'+(liked?' liked':'')+'" data-like="'+p.id+'">'+(liked?'❤️':'🤍')+' <span>'+p.likes+'</span></button>'
     +'<button data-comment="'+p.id+'">💬 <span>'+(commentsByPost[p.id]||[]).length+'</span></button>'
     +'<button data-share="'+p.id+'">↗ share</button>'
     +'</div></article>';
