@@ -709,7 +709,7 @@ function loadComms(){
   });
 }
 function openCommById(id){
-  openComm=comms.find(function(c){return c.id===id});if(!openComm)return;
+  openComm=comms.find(function(c){return String(c.id)===String(id)});if(!openComm)return;
   $('#comm-name').textContent=openComm.name;
   $('#comm-sub').textContent='by '+(openComm.creator_handle||'the network');
   $('#comm-desc').textContent=openComm.description;
