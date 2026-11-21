@@ -847,7 +847,7 @@ function setTheme(i){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,.comm');
   if(!t)return;
   if(t.dataset.tab)go(t.dataset.tab);
   else if(t.dataset.user!==undefined)openConvoByUser(t.dataset.user,t.dataset.handle);
