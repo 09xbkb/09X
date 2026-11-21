@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>XYNXNET</title>
+<meta name="description" content="The dark network. Everything in one place.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05050a;
+    --bg2:#0a0a14;
+    --card:#0e0e1a;
+    --line:rgba(255,255,255,.07);
+    --ink:#eceef6;
+    --dim:#9a9cb4;
+    --faint:#62647c;
+    --accent:#8b5cf6;
+    --accent2:#22d3ee;
+    --radius:18px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);color:var(--ink);
+    font-family:'Inter',system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+  input,textarea{font-family:inherit;color:inherit}
+  ::placeholder{color:var(--faint)}
+
+  #stars{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5}
+
+  /* ============ LOGIN ============ */
+  #login{
+    position:relative;z-index:1;min-height:100svh;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:24px;
+  }
+  #login .word{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;
+    font-size:clamp(2.6rem,11vw,5.5rem);letter-spacing:-.03em;
+    background:linear-gradient(115deg,#f5f3ff 5%,var(--accent) 45%,var(--accent2) 85%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
+    filter:drop-shadow(0 0 26px rgba(139,92,246,.4));
+  }
+  #login .sub{color:var(--dim);letter-spacing:.22em;text-transform:uppercase;font-size:.72rem;margin:14px 0 40px}
+  .login-card{
+    width:min(360px,100%);background:rgba(14,14,26,.75);border:1px solid var(--line);
+    border-radius:22px;padding:26px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    text-align:left;
+  }
+  .login-card label{display:block;font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin:0 0 6px 2px}
+  .login-card input{
+    width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);
+    border-radius:12px;padding:13px 14px;font-size:.95rem;outline:none;margin-bottom:16px;
+  }
+  .login-card input:focus{border-color:var(--accent)}
+  .btn{
+    display:block;width:100%;text-align:center;
+    background:linear-gradient(115deg,var(--accent),var(--accent2));
+    color:#05050a;font-weight:700;font-size:.92rem;letter-spacing:.06em;
+    border-radius:12px;padding:13px;transition:filter .2s;
+  }
+  .btn:hover{filter:brightness(1.15)}
+  .login-card .alt{margin-top:14px;text-align:center;font-size:.78rem;color:var(--dim)}
+  .login-card .alt b{color:var(--accent2);font-weight:600;cursor:pointer}
+  #access-code{
+    display:none;margin-top:16px;background:rgba(255,255,255,.04);border:1px dashed var(--line);
+    border-radius:12px;padding:12px;font-size:.8rem;color:var(--dim);text-align:center;
+  }
+  #access-code b{display:block;font-family:'Space Grotesk',sans-serif;font-size:1.2rem;letter-spacing:.3em;color:var(--ink);margin-top:6px}
+
+  /* ============ APP SHELL ============ */
+  #app{position:relative;z-index:1;display:none;min-height:100svh}
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;
+    background:rgba(5,5,10,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar .word{
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1.25rem;letter-spacing:-.02em;
+    background:linear-gradient(115deg,#f5f3ff,var(--accent) 55%,var(--accent2));
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent;
+  }
+  .topbar .actions{display:flex;gap:8px}
+  .icon-btn{
+    width:36px;height:36px;border-radius:50%;display:grid;place-items:center;
+    background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:.95rem;
+  }
+
+  .shell{display:flex;max-width:1120px;margin:0 auto}
+  .rail{display:none}
+  main{flex:1;min-width:0;padding-bottom:76px}
+
+  .screen{display:none;animation:fadein .25s ease}
+  .screen.on{display:block}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* bottom nav */
+  .nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    display:flex;justify-content:space-around;
+    background:rgba(5,5,10,.85);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--line);
+    padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+  }
+  .nav button{
+    display:flex;flex-direction:column;align-items:center;gap:3px;
+    font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
+    padding:4px 10px;border-radius:12px;
+  }
+  .nav button .ico{font-size:1.15rem}
+  .nav button.on{color:var(--accent2)}
+
+  /* ============ FEED ============ */
+  .composer-teaser{
+    display:flex;gap:12px;align-items:center;
+    margin:14px 16px;padding:12px 14px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    color:var(--faint);font-size:.9rem;cursor:text;
+  }
+  .post{
+    margin:0 16px 14px;padding:16px;
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  }
+  .post .head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .post .who{line-height:1.25;min-width:0}
+  .post .who b{display:block;font-size:.92rem}
+  .post .who span{font-size:.75rem;color:var(--faint)}
+  .post .body{font-size:.92rem;line-height:1.55;color:var(--ink);white-space:pre-wrap}
+  .post .media{
+    margin-top:12px;border-radius:14px;overflow:hidden;position:relative;
+    aspect-ratio:16/9;
+  }
+  .post .media .art{position:absolute;inset:0}
+  .post .media .tag{
+    position:absolute;left:10px;bottom:10px;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;
+    background:rgba(0,0,0,.5);padding:5px 10px;border-radius:999px;backdrop-filter:blur(4px);
+  }
+  .post .foot{display:flex;gap:6px;margin-top:12px}
+  .post .foot button{
+    display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--dim);
+    padding:7px 12px;border-radius:999px;transition:background .15s;
+  }
+  .post .foot button:hover{background:rgba(255,255,255,.05)}
+  .post .foot button.liked{color:#f472b6}
+
+  /* avatars - animated pfps */
+  .pfp{
+    width:40px;height:40px;border-radius:50%;flex:none;position:relative;
+    background:conic-gradient(from 0deg,var(--a1,#8b5cf6),var(--a2,#22d3ee),var(--a3,#e879f9),var(--a1,#8b5cf6));
+    display:grid;place-items:center;
+    font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:.95rem;color:#05050a;
+  }
+  .pfp::after{content:"";position:absolute;inset:2px;border-radius:50%;background:conic-gradient(from 180deg,var(--a1,#8b5cf6),var(--a2,#22d3ee),var(--a3,#e879f9),var(--a1,#8b5cf6));opacity:.55;z-index:-1}
+  body.anim-pfps .pfp{animation:spin 7s linear infinite}
+  @keyframes spin{to{filter:hue-rotate(360deg)}}
+  .pfp.lg{width:84px;height:84px;font-size:1.8rem}
+
+  /* ============ SHORTS ============ */
+  #s-shorts{padding:0}
+  .shorts-rail{scroll-snap-type:y mandatory;overflow-y:auto;height:calc(100svh - 130px)}
+  .short{
+    scroll-snap-align:start;height:calc(100svh - 130px);position:relative;
+    display:flex;align-items:flex-end;padding:18px;
+  }
+  .short .bg{position:absolute;inset:0;z-index:-1}
+  .short .bg::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 40%,rgba(5,5,10,.9))}
+  .short .shimmer{
+    position:absolute;inset:0;z-index:-1;
+    background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.09) 50%,transparent 60%);
+    background-size:250% 100%;animation:shim 3.2s linear infinite;
+  }
+  @keyframes shim{to{background-position:-250% 0}}
+  .short .meta{max-width:75%}
+  .short .meta .who{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-weight:600;font-size:.9rem}
+  .short .meta p{font-size:.88rem;line-height:1.5;color:var(--ink)}
+  .short .side{position:absolute;right:12px;bottom:96px;display:flex;flex-direction:column;gap:16px;text-align:center;font-size:.7rem;color:var(--dim)}
+  .short .side button{font-size:1.4rem;display:flex;flex-direction:column;align-items:center;gap:2px}
+  .short .side button span{font-size:.65rem;color:var(--dim)}
+  .play-pill{
+    position:absolute;top:14px;left:14px;font-size:.6rem;letter-spacing:.24em;text-transform:uppercase;
+    background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:999px;padding:5px 12px;color:var(--dim);
+  }
+
+  /* ============ CHAT ============ */
+  .chat-item{
+    display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;
+    border-bottom:1px solid var(--line);
+  }
+  .chat-item:hover{background:rgba(255,255,255,.03)}
+  .chat-item .who{flex:1;min-width:0}
+  .chat-item .who b{display:block;font-size:.92rem}
+  .chat-item .who p{font-size:.8rem;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chat-item .time{font-size:.7rem;color:var(--faint)}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);flex:none}
+  .convo{display:flex;flex-direction:column;height:calc(100svh - 130px)}
+  .convo-head{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)}
+  .convo-head .back{font-size:1.1rem;color:var(--dim);padding:4px 8px}
+  .convo-head b{font-size:.95rem}
+  .convo-head span{display:block;font-size:.7rem;color:#34d399}
+  .msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .msg{max-width:78%;padding:10px 14px;border-radius:18px;font-size:.9rem;line-height:1.45;animation:fadein .2s ease}
+  .msg.them{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:6px}
+  .msg.me{align-self:flex-end;background:linear-gradient(115deg,var(--accent),var(--accent2));color:#05050a;font-weight:500;border-bottom-right-radius:6px}
+  .msg-input{display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+  .msg-input input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:11px 16px;font-size:.9rem;outline:none}
+  .msg-input input:focus{border-color:var(--accent)}
+  .msg-input .send{width:44px;height:44px;border-radius:50%;background:linear-gradient(115deg,var(--accent),var(--accent2));color:#05050a;font-weight:700;flex:none}
+
+  /* ============ COMMUNITIES ============ */
+  .comm-grid{display:grid;gap:14px;padding:14px 16px;grid-template-columns:1fr}
+  @media(min-width:700px){.comm-grid{grid-template-columns:1fr 1fr}}
+  .comm{
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--card);
+  }
+  .comm .banner{height:88px;position:relative}
+  .comm .banner::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent,rgba(14,14,26,.95))}
+  .comm .in{padding:0 16px 16px;margin-top:-26px;position:relative}
+  .comm h3{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;margin-bottom:6px}
+  .comm p{font-size:.84rem;color:var(--dim);line-height:1.5;margin-bottom:12px}
+  .comm .meta{display:flex;justify-content:space-between;align-items:center}
+  .comm .meta span{font-size:.74rem;color:var(--faint)}
+  .join{
+    font-size:.76rem;font-weight:600;letter-spacing:.06em;padding:8px 18px;border-radius:999px;
+    border:1px solid var(--accent);color:var(--accent2);transition:all .2s;
+  }
+  .join.joined{background:linear-gradient(115deg,var(--accent),var(--accent2));color:#05050a;border-color:transparent}
+
+  /* ============ PROFILE ============ */
+  .prof-banner{height:170px;position:relative;overflow:hidden}
+  .prof-banner .slide{position:absolute;inset:-40%;background:conic-gradient(from 0deg,#3b1a78,#0e3a5c,#5c1248,#3b1a78);animation:slowspin 18s linear infinite}
+  @keyframes slowspin{to{transform:rotate(360deg)}}
+  .prof-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 30%,var(--bg))}
+  .prof-head{padding:0 16px;margin-top:-44px;position:relative;z-index:2}
+  .prof-head .row{display:flex;justify-content:space-between;align-items:flex-end}
+  .prof-head h2{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;margin-top:10px}
+  .prof-head .handle{color:var(--faint);font-size:.85rem}
+  .prof-head .bio{margin-top:10px;font-size:.9rem;color:var(--dim);line-height:1.5}
+  .prof-stats{display:flex;gap:20px;margin-top:14px;font-size:.85rem}
+  .prof-stats b{font-family:'Space Grotesk',sans-serif}
+  .prof-stats span{color:var(--faint)}
+  .edit-btn{
+    font-size:.78rem;font-weight:600;padding:9px 18px;border-radius:999px;
+    border:1px solid var(--line);background:rgba(255,255,255,.04);
+  }
+  .prof-tabs{display:flex;gap:4px;margin:18px 16px 14px;border-bottom:1px solid var(--line)}
+  .prof-tabs button{padding:10px 14px;font-size:.82rem;font-weight:600;color:var(--faint);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .prof-tabs button.on{color:var(--accent2);border-color:var(--accent2)}
+
+  /* ============ MODALS ============ */
+  .modal{
+    position:fixed;inset:0;z-index:50;display:none;
+    background:rgba(3,3,8,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    align-items:flex-end;justify-content:center;
+  }
+  .modal.on{display:flex}
+  .sheet{
+    width:min(560px,100%);max-height:88svh;overflow-y:auto;
+    background:var(--bg2);border:1px solid var(--line);border-radius:22px 22px 0 0;
+    padding:20px;animation:up .25s ease;
+  }
+  @keyframes up{from{transform:translateY(30px);opacity:.4}to{transform:none;opacity:1}}
+  .sheet h3{font-family:'Space Grotesk',sans-serif;margin-bottom:14px;font-size:1.1rem}
+  .sheet .close{float:right;color:var(--faint);font-size:1.2rem;padding:2px 8px}
+  .sheet textarea{
+    width:100%;min-height:110px;background:rgba(255,255,255,.04);border:1px solid var(--line);
+    border-radius:14px;padding:14px;font-size:.92rem;outline:none;resize:vertical;
+  }
+  .sheet textarea:focus{border-color:var(--accent)}
+  .attach-row{display:flex;gap:8px;margin:14px 0}
+  .attach-row button{
+    flex:1;padding:12px 4px;border:1px dashed var(--line);border-radius:12px;
+    font-size:.72rem;color:var(--dim);letter-spacing:.04em;
+  }
+  .attach-row button:hover{border-color:var(--accent);color:var(--ink)}
+  .swatches{display:flex;gap:12px;margin:10px 0 18px;flex-wrap:wrap}
+  .swatch{width:44px;height:44px;border-radius:50%;border:2px solid transparent;padding:3px}
+  .swatch.on{border-color:#fff}
+  .swatch i{display:block;width:100%;height:100%;border-radius:50%}
+  .theme-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:.88rem}
+  .theme-row small{display:block;color:var(--faint);font-size:.74rem;margin-top:2px}
+  .toggle{width:46px;height:26px;border-radius:999px;background:rgba(255,255,255,.1);position:relative;transition:background .2s;flex:none}
+  .toggle::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .2s}
+  .toggle.on{background:var(--accent)}
+  .toggle.on::after{transform:translateX(20px)}
+
+  .toast{
+    position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(20px);
+    background:var(--bg2);border:1px solid var(--line);border-radius:999px;
+    padding:10px 20px;font-size:.82rem;opacity:0;pointer-events:none;transition:all .3s;z-index:60;
+  }
+  .toast.on{opacity:1;transform:translateX(-50%)}
+
+  /* ============ DESKTOP ============ */
+  @media(min-width:900px){
+    .nav{display:none}
+    main{padding-bottom:0}
+    .rail{
+      display:flex;flex-direction:column;gap:4px;flex:none;width:230px;
+      padding:18px 14px;border-right:1px solid var(--line);
+      position:sticky;top:57px;height:calc(100svh - 57px);
+    }
+    .rail button{
+      display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;
+      font-size:.92rem;color:var(--dim);text-align:left;
+    }
+    .rail button .ico{font-size:1.1rem}
+    .rail button.on{color:var(--ink);background:rgba(255,255,255,.05)}
+    .rail .btn{margin-top:auto}
+    .shorts-rail{height:calc(100svh - 57px)}
+    .short{height:calc(100svh - 57px)}
+    .convo{height:calc(100svh - 57px)}
+    .modal{align-items:center}
+    .sheet{border-radius:22px}
+  }
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body class="anim-pfps">
+<canvas id="stars"></canvas>
+
+<!-- ================= LOGIN ================= -->
+<section id="login">
+  <h1 class="word">XYNXNET</h1>
+  <p class="sub">the dark network</p>
+  <div class="login-card">
+    <label for="handle">handle</label>
+    <input id="handle" type="text" placeholder="@you" value="@09xbkb" autocomplete="off">
+    <label for="pw">password</label>
+    <input id="pw" type="password" placeholder="••••••••" value="xynxnet">
+    <button class="btn" id="enter-btn">enter the network</button>
+    <p class="alt">forgot it? <b id="gen-code">get an access code</b></p>
+    <div id="access-code">keep this somewhere safe. it's your way back in.<b id="code-val"></b></div>
+  </div>
+  <p class="sub" style="margin-top:34px;font-size:.62rem">v1 preview · front end only · accounts go live later</p>
+</section>
+
+<!-- ================= APP ================= -->
+<div id="app">
+  <header class="topbar">
+    <span class="word">XYNXNET</span>
+    <div class="actions">
+      <button class="icon-btn" id="theme-btn" title="themes">🎨</button>
+      <button class="icon-btn" id="bell-btn" title="notifications">🔔</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <nav class="rail" id="rail"></nav>
+    <main id="main">
+
+      <!-- FEED -->
+      <section class="screen on" id="s-feed">
+        <div class="composer-teaser" id="composer-teaser">
+          <div class="pfp" style="--a1:#8b5cf6;--a2:#22d3ee;--a3:#e879f9">0</div>
+          drop something into the network…
+        </div>
+        <div id="feed"></div>
+      </section>
+
+      <!-- SHORTS -->
+      <section class="screen" id="s-shorts">
+        <div class="shorts-rail" id="shorts"></div>
+      </section>
+
+      <!-- CHAT -->
+      <section class="screen" id="s-chat">
+        <div id="chat-list"></div>
+        <div class="convo" id="convo" style="display:none">
+          <div class="convo-head">
+            <button class="back" id="convo-back">←</button>
+            <div class="pfp" id="convo-pfp">X</div>
+            <div><b id="convo-name"></b><span id="convo-status">online</span></div>
+          </div>
+          <div class="msgs" id="msgs"></div>
+          <div class="msg-input">
+            <input id="msg-text" type="text" placeholder="message…" autocomplete="off">
+            <button class="send" id="msg-send">↑</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- COMMUNITIES -->
+      <section class="screen" id="s-comm">
+        <div class="comm-grid" id="comms"></div>
+      </section>
+
+      <!-- PROFILE -->
+      <section class="screen" id="s-prof">
+        <div class="prof-banner"><div class="slide"></div></div>
+        <div class="prof-head">
+          <div class="row">
+            <div class="pfp lg" style="--a1:#8b5cf6;--a2:#22d3ee;--a3:#e879f9">09</div>
+            <button class="edit-btn" id="prof-theme-btn">themes</button>
+          </div>
+          <h2>09X</h2>
+          <span class="handle">@09xbkb</span>
+          <p class="bio">building the dark network. game dev, agent whisperer, night owl. everything i make lives at 09X.</p>
+          <div class="prof-stats">
+            <div><b>3</b> <span>posts</span></div>
+            <div><b>2</b> <span>friends</span></div>
+            <div><b>4</b> <span>communities</span></div>
+          </div>
+        </div>
+        <div class="prof-tabs">
+          <button class="on">posts</button><button>shorts</button><button>media</button>
+        </div>
+        <div id="prof-feed"></div>
+      </section>
+
+    </main>
+  </div>
+
+  <nav class="nav" id="nav"></nav>
+</div>
+
+<!-- composer -->
+<div class="modal" id="composer">
+  <div class="sheet">
+    <button class="close" data-close>✕</button>
+    <h3>new post</h3>
+    <textarea id="composer-text" placeholder="what's happening in your corner of the network?"></textarea>
+    <div class="attach-row">
+      <button data-mock>📷 pic</button>
+      <button data-mock>🎬 video</button>
+      <button data-mock>⚡ short</button>
+      <button data-mock>📍 place</button>
+    </div>
+    <button class="btn" id="post-btn">post</button>
+  </div>
+</div>
+
+<!-- themes -->
+<div class="modal" id="themes">
+  <div class="sheet">
+    <button class="close" data-close>✕</button>
+    <h3>make it yours</h3>
+    <div class="theme-row" style="border:none;padding-bottom:4px">accent</div>
+    <div class="swatches" id="swatches"></div>
+    <div class="theme-row">
+      <div>animated pfps<small>avatars shift hue, slowly</small></div>
+      <button class="toggle on" id="tgl-pfp"></button>
+    </div>
+    <div class="theme-row">
+      <div>starfield<small>the deep space layer behind everything</small></div>
+      <button class="toggle on" id="tgl-stars"></button>
+    </div>
+    <div class="theme-row" style="border:none">
+      <div>dim mode<small>even darker, for 3am</small></div>
+      <button class="toggle" id="tgl-dim"></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s){return document.querySelector(s)};
+
+/* ---------- stars ---------- */
+var c=$('#stars'),x=c.getContext('2d'),W,H,stars=[],starOn=true;
+function size(){W=c.width=innerWidth;H=c.height=innerHeight}
+function make(){stars=[];for(var i=0;i<130;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.2,d:Math.random()*.8+.2,t:Math.random()*6.28,s:Math.random()*.015+.005})}
+function draw(){x.clearRect(0,0,W,H);if(starOn){for(var i=0;i<stars.length;i++){var s=stars[i];s.t+=s.s;x.globalAlpha=(.25+Math.abs(Math.sin(s.t))*.75)*s.d;x.fillStyle='#cfd3ff';x.beginPath();x.arc(s.x,s.y,s.r,0,7);x.fill()}}x.globalAlpha=1;requestAnimationFrame(draw)}
+addEventListener('resize',function(){size();make()});size();make();draw();
+
+/* ---------- toast ---------- */
+var toastEl=$('#toast'),toastT;
+function toast(t){toastEl.textContent=t;toastEl.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){toastEl.classList.remove('on')},2200)}
+
+/* ---------- mock data ---------- */
+var people={
+  you:{name:'09X',handle:'@09xbkb',init:'09',c:['#8b5cf6','#22d3ee','#e879f9']},
+  xenius:{name:'XENIUS',handle:'@xenius',init:'X',c:['#f59e0b','#ef4444','#8b5cf6']},
+  zytros:{name:'Zytros',handle:'@zytros',init:'Z',c:['#22d3ee','#3b82f6','#8b5cf6']},
+  nova:{name:'nova',handle:'@novadrive',init:'n',c:['#e879f9','#8b5cf6','#22d3ee']},
+  rift:{name:'rift',handle:'@riftside',init:'r',c:['#34d399','#22d3ee','#3b82f6']}
+};
+function pfp(p,cls){return '<div class="pfp '+(cls||'')+'" style="--a1:'+p.c[0]+';--a2:'+p.c[1]+';--a3:'+p.c[2]+'">'+p.init+'</div>'}
+
+var posts=[
+  {who:'xenius',time:'2m',text:'ops board is clean. every agent reporting in. the machine hums tonight.',likes:12,comments:3,media:{g:'linear-gradient(135deg,#1a0533,#3b1a78 45%,#0e3a5c)',tag:'visual'}},
+  {who:'nova',time:'26m',text:'okay the new shorts feed is actually dangerous. looked up and it was 2am',likes:48,comments:11},
+  {who:'zytros',time:'1h',text:'wiki entry #400 today. the grid remembers everything now. every world, every agent, every version.',likes:23,comments:5,media:{g:'linear-gradient(135deg,#062a3c,#0e3a5c 50%,#123)',tag:'clip · 0:42'}},
+  {who:'rift',time:'3h',text:'hot take: dark mode should be the ONLY mode. fight me in the comments',likes:97,comments:34},
+  {who:'nova',time:'5h',text:'posted the neon city run as a short. the drift at the end is criminal',likes:61,comments:9,media:{g:'linear-gradient(135deg,#5c1248,#e879f9 130%)',tag:'short · 0:17'}}
+];
+
+var shortsData=[
+  {who:'nova',text:'neon city at 3am hits different. full run, no crashes 🌃',g:'linear-gradient(160deg,#12042b,#3b1a78 40%,#0e3a5c)',likes:'1.2k',comments:'84'},
+  {who:'rift',text:'rating your setups until one of them scares me. ep. 12',g:'linear-gradient(160deg,#0b1f17,#065f46 50%,#0e3a5c)',likes:'856',comments:'122'},
+  {who:'xenius',text:'a day inside the ops board. sped up 400x.',g:'linear-gradient(160deg,#2b1604,#92400e 55%,#5c1248)',likes:'2.4k',comments:'203'}
+];
+
+var chatsData=[
+  {who:'xenius',last:'the build holds. ship it.',time:'now',unread:true,msgs:[
+    ['them','ops check: the hub page went live tonight'],['them','all green. github took it on the first deploy'],['me','we really got a site up in one evening'],['them','the build holds. ship it.']]},
+  {who:'zytros',last:'documented. entry #401.',time:'1h',unread:false,msgs:[
+    ['me','did you log the site launch'],['them','documented. entry #401.'],['them','"and on that night, the front door opened"']]},
+  {who:'nova',last:'that drift was actually insane',time:'3h',unread:false,msgs:[
+    ['them','that drift was actually insane'],['me','tilt controls just work when the screen is huge'],['them','ok now make one i can play']]}
+];
+var replies=['yo','fr','okay that goes hard','say less','on my way','lowkey agree','run it'];
+
+var commsData=[
+  {name:'night shift',desc:'for the ones who build after midnight. no small talk, just shipping.',members:'12.4k',g:'linear-gradient(120deg,#1a0533,#3b1a78)'},
+  {name:'game dev den',desc:'tilt controls, game loops, and the eternal fullscreen bug. show your work.',members:'8.1k',g:'linear-gradient(120deg,#062a3c,#0e7490)'},
+  {name:'deep space',desc:'nebulas, dark matter, and wallpapers that make your phone feel infinite.',members:'21.9k',g:'linear-gradient(120deg,#3b0764,#701a75)'},
+  {name:'the grid',desc:'worldbuilding without limits. lore drops, wiki wars, canon debates.',members:'3.7k',g:'linear-gradient(120deg,#3a1d04,#b45309)'}
+];
+
+/* ---------- render: feed ---------- */
+function postHTML(p,liked){
+  var per=people[p.who];
+  var m=p.media?'<div class="media"><div class="art" style="background:'+p.media.g+'"></div><span class="tag">'+p.media.tag+'</span></div>':'';
+  return '<article class="post">'
+    +'<div class="head">'+pfp(per)+'<div class="who"><b>'+per.name+'</b><span>'+per.handle+' · '+p.time+'</span></div></div>'
+    +'<div class="body">'+p.text+'</div>'+m
+    +'<div class="foot">'
+    +'<button class="like'+(liked?' liked':'')+'">'+(liked?'❤️':'🤍')+' <span>'+(p.likes+(liked?1:0))+'</span></button>'
+    +'<button data-mock>💬 <span>'+p.comments+'</span></button>'
+    +'<button data-mock>↗ share</button>'
+    +'</div></article>';
+}
+var likedSet={};
+function renderFeed(){
+  $('#feed').innerHTML=posts.map(function(p,i){return postHTML(p,likedSet[i])}).join('');
+  $('#prof-feed').innerHTML=posts.slice(0,3).map(function(p,i){return postHTML(p,likedSet[i])}).join('');
+}
+
+/* ---------- render: shorts ---------- */
+function renderShorts(){
+  $('#shorts').innerHTML=shortsData.map(function(s){
+    var per=people[s.who];
+    return '<div class="short"><div class="bg" style="background:'+s.g+'"></div><div class="shimmer"></div>'
+      +'<span class="play-pill">▶ short</span>'
+      +'<div class="meta"><div class="who">'+pfp(per)+per.handle+'</div><p>'+s.text+'</p></div>'
+      +'<div class="side"><button data-mock>❤️<span>'+s.likes+'</span></button><button data-mock>💬<span>'+s.comments+'</span></button><button data-mock>↗<span>share</span></button></div>'
+      +'</div>';
+  }).join('');
+}
+
+/* ---------- render: chat ---------- */
+function renderChats(){
+  $('#chat-list').innerHTML=chatsData.map(function(c,i){
+    var per=people[c.who];
+    return '<div class="chat-item" data-chat="'+i+'">'+pfp(per)
+      +'<div class="who"><b>'+per.name+'</b><p>'+c.last+'</p></div>'
+      +(c.unread?'<div class="dot"></div>':'')+'<span class="time">'+c.time+'</span></div>';
+  }).join('');
+}
+var openChat=null;
+function openConvo(i){
+  openChat=i;var c=chatsData[i];c.unread=false;renderChats();
+  $('#convo-name').textContent=people[c.who].name;
+  $('#convo-pfp').outerHTML=pfp(people[c.who]).replace('class="pfp','id="convo-pfp" class="pfp');
+  renderMsgs();
+  $('#chat-list').style.display='none';$('#convo').style.display='flex';
+}
+function renderMsgs(){
+  var c=chatsData[openChat];
+  $('#msgs').innerHTML=c.msgs.map(function(m){return '<div class="msg '+m[0]+'">'+m[1]+'</div>'}).join('');
+  $('#msgs').scrollTop=$('#msgs').scrollHeight;
+}
+function sendMsg(){
+  var v=$('#msg-text').value.trim();if(!v||openChat===null)return;
+  chatsData[openChat].msgs.push(['me',v]);$('#msg-text').value='';renderMsgs();
+  setTimeout(function(){
+    chatsData[openChat].msgs.push(['them',replies[Math.floor(Math.random()*replies.length)]]);
+    renderMsgs();
+  },900+Math.random()*900);
+}
+
+/* ---------- render: communities ---------- */
+var joinedSet={};
+function renderComms(){
+  $('#comms').innerHTML=commsData.map(function(c,i){
+    var j=joinedSet[i];
+    return '<div class="comm"><div class="banner" style="background:'+c.g+'"></div><div class="in">'
+      +'<h3>'+c.name+'</h3><p>'+c.desc+'</p>'
+      +'<div class="meta"><span>'+c.members+' members</span><button class="join'+(j?' joined':'')+'" data-join="'+i+'">'+(j?'in ✓':'join')+'</button></div>'
+      +'</div></div>';
+  }).join('');
+}
+
+/* ---------- nav ---------- */
+var tabs=[['feed','🏠','home'],['shorts','⚡','shorts'],['chat','💬','chat'],['comm','⬢','squads'],['prof','👤','you']];
+function buildNav(){
+  $('#nav').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+t[1]+'</span>'+t[2]+'</button>'}).join('');
+  $('#rail').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+t[1]+'</span>'+t[2]+'</button>'}).join('')+'<button class="btn" id="rail-post">+ post</button>';
+}
+function go(tab){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on')});
+  $('#s-'+tab).classList.add('on');
+  document.querySelectorAll('[data-tab]').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
+  if(tab!=='chat'){$('#chat-list').style.display='';$('#convo').style.display='none';openChat=null}
+  window.scrollTo(0,0);
+}
+
+/* ---------- themes ---------- */
+var themes=[
+  ['#8b5cf6','#22d3ee'],['#22d3ee','#34d399'],['#e879f9','#8b5cf6'],
+  ['#f59e0b','#ef4444'],['#34d399','#22d3ee'],['#ef4444','#e879f9']
+];
+function renderSwatches(){
+  $('#swatches').innerHTML=themes.map(function(t,i){
+    return '<button class="swatch'+(i===0?' on':'')+'" data-theme="'+i+'"><i style="background:linear-gradient(115deg,'+t[0]+','+t[1]+')"></i></button>';
+  }).join('');
+}
+function setTheme(i){
+  document.documentElement.style.setProperty('--accent',themes[i][0]);
+  document.documentElement.style.setProperty('--accent2',themes[i][1]);
+  document.querySelectorAll('.swatch').forEach(function(s,j){s.classList.toggle('on',i===j)});
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-tab],[data-chat],[data-join],[data-theme],[data-mock],[data-close],.like,#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#bell-btn,#enter-btn,#gen-code,.toggle,#rail-post');
+  if(!t)return;
+  if(t.dataset.tab)go(t.dataset.tab);
+  else if(t.dataset.chat!==undefined)openConvo(+t.dataset.chat);
+  else if(t.dataset.join!==undefined){var j=+t.dataset.join;joinedSet[j]=!joinedSet[j];renderComms();toast(joinedSet[j]?"you're in. welcome to "+commsData[j].name:'left '+commsData[j].name)}
+  else if(t.dataset.theme!==undefined){setTheme(+t.dataset.theme);toast('theme applied. the network bends to you')}
+  else if(t.id==='enter-btn'){
+    if(!$('#handle').value.trim()){toast('pick a handle first');return}
+    $('#login').style.display='none';$('#app').style.display='block';toast('welcome to the network, '+$('#handle').value.trim());
+  }
+  else if(t.id==='gen-code'){
+    var code='';var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    for(var i=0;i<8;i++)code+=chars[Math.floor(Math.random()*chars.length)];
+    $('#code-val').textContent=code.slice(0,4)+'-'+code.slice(4);
+    $('#access-code').style.display='block';
+  }
+  else if(t.id==='composer-teaser'||t.id==='rail-post')$('#composer').classList.add('on');
+  else if(t.id==='theme-btn'||t.id==='prof-theme-btn')$('#themes').classList.add('on');
+  else if(t.id==='bell-btn')toast('quiet for now. the network will call when it matters');
+  else if(t.id==='post-btn'){
+    var v=$('#composer-text').value.trim();if(!v){toast('write something first');return}
+    posts.unshift({who:'you',time:'now',text:v,likes:0,comments:0});
+    renderFeed();$('#composer-text').value='';$('#composer').classList.remove('on');toast('posted. the network sees you');
+  }
+  else if(t.id==='msg-send')sendMsg();
+  else if(t.id==='convo-back'){$('#chat-list').style.display='';$('#convo').style.display='none';openChat=null}
+  else if(t.classList.contains('like')){var idx=[].indexOf.call(document.querySelectorAll('#feed .post'),t.closest('.post'));likedSet[idx]=!likedSet[idx];renderFeed()}
+  else if(t.classList.contains('toggle')){
+    t.classList.toggle('on');
+    if(t.id==='tgl-stars')starOn=t.classList.contains('on');
+    if(t.id==='tgl-pfp')document.body.classList.toggle('anim-pfps',t.classList.contains('on'));
+    if(t.id==='tgl-dim'){var d=t.classList.contains('on');document.documentElement.style.setProperty('--bg',d?'#020205':'#05050a');document.documentElement.style.setProperty('--bg2',d?'#06060c':'#0a0a14');document.documentElement.style.setProperty('--card',d?'#0a0a12':'#0e0e1a')}
+  }
+  else if(t.dataset.close!==undefined)t.closest('.modal').classList.remove('on');
+  else if(t.dataset.mock!==undefined)toast('coming online when the backend wakes up');
+});
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&document.activeElement===$('#msg-text'))sendMsg()});
+document.querySelectorAll('.modal').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('on')})});
+
+renderFeed();renderShorts();renderChats();renderComms();buildNav();renderSwatches();go('feed');
+})();
+</script>
+</body>
+</html>
