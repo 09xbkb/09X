@@ -87,8 +87,8 @@
     grid-template-columns:1fr;
     padding-bottom:64px;
   }
-  @media(min-width:560px){.grid{grid-template-columns:1fr 1fr}}
-  @media(min-width:960px){.grid{grid-template-columns:repeat(4,1fr)}}
+  @media(min-width:560px){.grid{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .grid{max-width:640px;margin:0 auto}}
   @media(max-height:520px) and (orientation:landscape){
     .hero{min-height:auto;padding-top:64px}
     .scroll-hint{display:none}
@@ -165,20 +165,6 @@
       <h2>Neon City Drive</h2>
       <p>Tilt to steer. The phone is the controller, the whole neon city is yours. Free roam, coins, drift.</p>
       <span class="go">garage opens soon</span>
-    </a>
-
-    <a class="card c-os" href="#">
-      <span class="kind">mac app</span>
-      <h2>CISES OS</h2>
-      <p>A personal OS, built for one. Your files, your agents, your machine, one dark interface.</p>
-      <span class="go">in the lab</span>
-    </a>
-
-    <a class="card c-crew" href="#">
-      <span class="kind">agents</span>
-      <h2>The Crew</h2>
-      <p>XENIUS sorts ops. Zytros writes the wiki. 09X remembers everything. The squad behind the curtain.</p>
-      <span class="go">meet them soon</span>
     </a>
 
     <a class="card c-net" href="#">
