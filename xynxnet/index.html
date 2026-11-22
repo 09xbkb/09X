@@ -492,6 +492,11 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   .timein{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:.8rem;color-scheme:dark}
   .nt-bar{display:flex;align-items:center;justify-content:space-between;border-radius:14px;padding:18px;margin-bottom:10px;background:linear-gradient(90deg,#a2701f,#2a2a66 50%,#0a0a1a);font-size:.8rem}
   .nt-bar b{font-weight:600}
+  .inv-card{border:1px solid var(--accent);border-radius:16px;padding:14px;text-align:center;margin-bottom:10px;background:rgba(139,92,246,.06)}
+  .inv-card small{color:var(--faint);font-size:.74rem}
+  .inv-code{font-family:'Space Grotesk',sans-serif;font-size:1.5rem;letter-spacing:.12em;color:var(--accent2);margin:8px 0;font-weight:700;user-select:all}
+  .inv-act{display:flex;gap:10px;justify-content:center;margin-bottom:8px}.inv-act .btn{width:auto;padding:9px 22px;margin:0}
+  .inv-hrow{display:flex;justify-content:space-between;padding:8px 2px;font-size:.78rem;border-bottom:1px solid var(--line)}.inv-hrow code{font-family:monospace;color:var(--dim)}.inv-hrow span{color:var(--faint)}
 </style>
 </head>
 <body class="anim-pfps">
@@ -506,6 +511,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     <input id="handle" type="text" placeholder="@you" autocomplete="off" autocapitalize="off">
     <label for="pw">password</label>
     <input id="pw" type="password" placeholder="••••••••">
+    <label for="invite-code">invite code <span style="color:var(--faint);text-transform:none;letter-spacing:0">(new accounts only)</span></label>
+    <input id="invite-code" type="text" placeholder="NEBULA-7XK2" autocomplete="off" autocapitalize="characters" style="text-transform:uppercase">
     <button class="btn" id="enter-btn">enter the network</button>
     <p class="alt">new here? same button makes your account</p>
     <p class="alt" style="margin-top:8px"><b id="forgot-link">forgot your password?</b></p>
@@ -859,6 +866,18 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     <div style="font-size:.74rem;color:var(--faint);margin-top:8px">switches on its own, no flash, mid-scroll safe. picking a theme yourself wins until the next switch.</div>
   </div>
 </div>
+<div class="modal" id="inv-modal">
+  <div class="sheet">
+    <button class="close" data-close>✕</button>
+    <h3>invite codes <span class="pchip" id="inv-pill" style="font-size:.7rem;margin-left:8px;padding:4px 10px">...</span></h3>
+    <p style="font-size:.82rem;color:var(--dim);margin-bottom:12px">the network grows slow, one code at a time. every code traces back to who handed it out.</p>
+    <div id="inv-active"></div>
+    <button class="btn" id="inv-gen" style="margin-bottom:12px">new code</button>
+    <div class="theme-row" style="border:none;padding-bottom:4px;color:var(--faint)">history</div>
+    <div id="inv-hist"></div>
+    <div class="theme-row" style="border:none"><div>codes refill<small id="inv-next"></small></div><span class="pchip" style="font-size:.7rem">+1 every 2 weeks</span></div>
+  </div>
+</div>
 <div class="modal" id="notif-prefs">
   <div class="sheet">
     <button class="close" data-close>✕</button>
@@ -1118,7 +1137,7 @@ function hm(s){var a=String(s).split(':');return (+a[0])*60+(+a[1]||0)}
 function sunTimes(lat,lon,d){
   var rad=Math.PI/180,n=Math.floor((d-new Date(d.getFullYear(),0,0))/864e5);
   var B=2*Math.PI*(n-81)/364,eot=9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);
-  var dec=23.44*rad*Math.sin(2*Math.PI*(284+n)/365),x=-Math.tan(lat*rad)*Math.tan(dec);
+  var dec=23.44*rad*Math.sin(2*Math.PI*(284+n)/365),x=(Math.cos(90.833*rad)-Math.sin(lat*rad)*Math.sin(dec))/(Math.cos(lat*rad)*Math.cos(dec));
   if(x>=1)return {rise:null,set:null,polar:'night'};if(x<=-1)return {rise:null,set:null,polar:'day'};
   var ha=Math.acos(x)/rad*4,noon=720-4*lon-eot,off=-d.getTimezoneOffset();
   function loc(m){return ((Math.round(m+off)%1440)+1440)%1440}
@@ -1199,6 +1218,55 @@ document.addEventListener('keydown',function(e){
 });
 setInterval(function(){nightTick(false);if(me){sb.from('profiles').select('*').limit(500).then(function(r){if(!r.data)return;r.data.forEach(function(p){profilesByHandle[('@'+p.username).toLowerCase()]=p});if(me)myProfile=profilesByHandle[myHandle.toLowerCase()]||myProfile;paintPulseSpots()})}},60000);
 document.addEventListener('visibilitychange',function(){if(!document.hidden)nightTick(false)});
+/* ---------- v3 batch 7: invite codes ---------- */
+var invState=null;
+function openInvites(){if(!me){toast('sign in first');return}$('#inv-modal').classList.add('on');loadInvites()}
+function loadInvites(){
+  sb.rpc('my_invite_state').then(function(r){
+    if(r.error){toast('could not load codes');return}
+    invState=r.data;paintInvites();
+  });
+}
+function invLink(c){return 'https://09xbkb.github.io/09X/xynxnet/?invite='+encodeURIComponent(c)}
+function paintInvites(){
+  var st=invState;if(!st)return;
+  $('#inv-pill').textContent=st.unlimited?'∞ founder':st.balance+' of '+st.max+' left';
+  var now=Date.now(),act=[],hist=[];
+  (st.codes||[]).forEach(function(c){
+    if(c.used_by)hist.push(c);else if(new Date(c.expires_at)>now)act.push(c);else hist.push(c);
+  });
+  $('#inv-active').innerHTML=act.length?act.map(function(c){
+    var d=Math.max(1,Math.ceil((new Date(c.expires_at)-now)/864e5));
+    return '<div class="inv-card"><small>active code</small><div class="inv-code">'+esc(c.code)+'</div><div class="inv-act"><button class="btn" data-invcopy="'+esc(c.code)+'">copy</button><button class="edit-btn" data-invshare="'+esc(c.code)+'">share</button></div><small>expires in '+d+' day'+(d>1?'s':'')+' · 1 use</small></div>';
+  }).join(''):'<div class="inv-card"><small>no active code. make one when you have someone to invite.</small></div>';
+  var can=st.unlimited||st.balance>0;
+  $('#inv-gen').disabled=!can;$('#inv-gen').textContent=can?'new code':'no codes left';
+  $('#inv-hist').innerHTML=hist.length?hist.map(function(c){
+    var tail=c.used_by?'used by '+esc(String(c.used_handle||'someone').replace(/^@/,''))+' · '+new Date(c.used_at).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'expired unused';
+    return '<div class="inv-hrow"><code>'+esc(c.code)+'</code><span>'+tail+'</span></div>';
+  }).join(''):'<div style="font-size:.78rem;color:var(--faint);padding:4px 0 10px">nothing yet.</div>';
+  $('#inv-next').textContent=st.unlimited?'founder codes never run out':(st.balance>=st.max?'you are at the max':'next code '+new Date(st.next_refill).toLocaleDateString(undefined,{month:'short',day:'numeric'}));
+}
+function genInvite(){
+  $('#inv-gen').disabled=true;
+  sb.rpc('create_invite').then(function(r){
+    if(r.error){toast(String(r.error.message).replace(/^.*?:\s*/,'')||'could not make a code');loadInvites();return}
+    loadInvites();toast('code ready: '+r.data);
+  });
+}
+function shareInvite(c){
+  var text='you are in. use invite code '+c+' to join XYNXNET',url=invLink(c);
+  if(navigator.share){navigator.share({title:'XYNXNET invite',text:text,url:url}).catch(function(){});return}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text+' '+url).then(function(){toast('invite link copied')},function(){toast('copy blocked, use the code')});
+  else toast('copy blocked, use the code');
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest?e.target.closest('#inv-gen,[data-invcopy],[data-invshare]'):null;if(!t)return;
+  if(t.id==='inv-gen')genInvite();
+  else if(t.dataset.invcopy!==undefined){var c=t.dataset.invcopy;if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(c).then(function(){toast('code copied')},function(){toast('copy blocked, long-press the code')});else toast('copy blocked, long-press the code')}
+  else if(t.dataset.invshare!==undefined)shareInvite(t.dataset.invshare);
+});
+(function(){var m=location.search.match(/[?&]invite=([^&]+)/);if(m){var el=document.getElementById('invite-code');if(el)el.value=decodeURIComponent(m[1]).toUpperCase()}})();
 function loadFeed(){
   var nowIso=new Date().toISOString();
   var q1=sb.from('posts').select('*').order('created_at',{ascending:false}).limit(50);
@@ -1298,10 +1366,14 @@ function doAuth(){
   toast('checking the network...');
   sb.auth.signInWithPassword({email:email,password:p}).then(function(r){
     if(!r.error){enterApp(r.data.user);return}
+    var ic=($('#invite-code').value||'').trim().toUpperCase();
+    if(!ic){toast('no account with that handle and password. new here? you need an invite code');return}
+    sb.rpc('check_invite',{c:ic}).then(function(v){
+    if(!v.data){toast('that invite code is invalid, used or expired');return}
     var code='';var chars='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
     for(var i=0;i<8;i++)code+=chars[Math.floor(Math.random()*chars.length)];
     code=code.slice(0,4)+'-'+code.slice(4);
-    sb.auth.signUp({email:email,password:p,options:{data:{handle:'@'+h,access_code:code}}}).then(function(r2){
+    sb.auth.signUp({email:email,password:p,options:{data:{handle:'@'+h,access_code:code,invite_code:ic}}}).then(function(r2){
       if(r2.error){toast(/already/i.test(r2.error.message)?'that handle is taken - wrong password?':r2.error.message);return}
       var u=r2.data.user;
       var uname=h.toLowerCase().replace(/[^a-z0-9._-]/g,'');
@@ -1309,6 +1381,7 @@ function doAuth(){
         enterApp(u);
         setTimeout(function(){toast('your access code: '+code+' - it lives in themes now')},1200);
       });
+    });
     });
   });
 }
@@ -2290,7 +2363,7 @@ function syncAppBadge(){
 
 /* ---------- v3: xx numbers, logo menu, block/report ---------- */
 var myXX=null,iBlocked={},blockedMe={};
-var menuShipped={dial:true,saved:true,settings:true,notifs:true,livebg:true,pulse:true,night:true};
+var menuShipped={invites:true,dial:true,saved:true,settings:true,notifs:true,livebg:true,pulse:true,night:true};
 var menuDef=[
   ['constellation','✦','Constellation'],
   ['dial','☎️','Phone Dial'],
@@ -2335,6 +2408,7 @@ function menuGo(k){
   else if(k==='notifs')openNotifPrefs();
   else if(k==='livebg')go('prof');
   else if(k==='pulse')openPulse();
+  else if(k==='invites')openInvites();
   else if(k==='night'){paintNight();$('#night-modal').classList.add('on')}
   else if(k==='settings')$('#themes').classList.add('on');
 }
