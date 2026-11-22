@@ -2244,10 +2244,10 @@ document.addEventListener('click',function(e){
   else if(t.id==='msg-pic')$('#msg-pic-input').click();
   else if(t.id==='timer-chip')cycleTimer();
   else if(t.id==='receipts-chip')toggleReceipts();
+  else if(t.classList.contains('psong-play'))toggleProfSong(t.dataset.song,t);
   else if(t.classList.contains('vplay'))playVoice(t);
   else if(t.id==='song-add'||t.id==='song-change')$('#song-input').click();
   else if(t.id==='song-remove')removeSong();
-  else if(t.classList.contains('psong-play'))toggleProfSong(t.dataset.song,t);
   else if(t.dataset.bg!==undefined&&t.closest('#prof-livecards'))setLiveBg(t.dataset.bg);
   else if(t.id==='push-enable')enablePush();
   else if(t.dataset.reactadd!==undefined){var ro=$('#ropts-'+t.dataset.reactadd);if(ro)ro.style.display=ro.style.display==='none'?'flex':'none'}
