@@ -1068,9 +1068,30 @@ function loadMsgs(){
   sb.from('messages').select('*').or('and(sender.eq.'+me.id+',recipient.eq.'+openChatUser.id+'),and(sender.eq.'+openChatUser.id+',recipient.eq.'+me.id+')').order('created_at',{ascending:true}).limit(200).then(function(r){
     var atBottom=$('#msgs').scrollTop+$('#msgs').clientHeight>=$('#msgs').scrollHeight-60;
     $('#msgs').innerHTML=(r.data||[]).map(function(m){
-      return '<div class="msg '+(m.sender===me.id?'me':'them')+'">'+(m.media_url?'<img src="'+esc(m.media_url)+'" alt="" loading="lazy">':'')+esc(m.text||'')+'</div>';
+      return '<div class="msg '+(m.sender===me.id?'me':'them')+'">'+(m.media_url?dmImgTag(m.media_url):'')+esc(m.text||'')+'</div>';
     }).join('')||'<div style="color:var(--faint);text-align:center;margin-top:20px">say the first thing.</div>';
+    dmResolveImgs();
     if(atBottom)$('#msgs').scrollTop=$('#msgs').scrollHeight;
+  });
+}
+/* private DM photos: stored as 'dm-media:<sender>/<recipient>/file' in a private bucket, shown via short-lived signed URLs */
+var dmUrlCache={};
+function dmImgTag(mu){
+  if(mu.indexOf('dm-media:')!==0)return '<img src="'+esc(mu)+'" alt="" loading="lazy">';
+  var p=mu.slice(9),c=dmUrlCache[p];
+  if(c&&c.t>Date.now())return '<img src="'+esc(c.u)+'" data-dm="'+esc(p)+'" alt="" loading="lazy">';
+  return '<img data-dm="'+esc(p)+'" alt="" style="min-width:120px;min-height:80px;background:var(--panel,#111)">';
+}
+function dmResolveImgs(){
+  var imgs=document.querySelectorAll('#msgs img[data-dm]');
+  Array.prototype.forEach.call(imgs,function(img){
+    if(img.getAttribute('src'))return;
+    var p=img.getAttribute('data-dm');
+    sb.storage.from('dm-media').createSignedUrl(p,3600).then(function(r){
+      if(r.error||!r.data)return;
+      dmUrlCache[p]={u:r.data.signedUrl,t:Date.now()+50*60*1000};
+      img.src=r.data.signedUrl;
+    });
   });
 }
 function sendMsg(){
@@ -1088,11 +1109,11 @@ function sendMsg(){
   if(f){
     if(f.size>20*1024*1024){toast('keep pics under 20MB');return}
     var ext=(f.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-    var path=me.id+'/dm-'+Date.now()+'.'+ext;
+    var path=me.id+'/'+openChatUser.id+'/dm-'+Date.now()+'.'+ext;
     toast('uploading pic...');
-    sb.storage.from('media').upload(path,f).then(function(r){
+    sb.storage.from('dm-media').upload(path,f).then(function(r){
       if(r.error){toast('upload failed: '+r.error.message);return}
-      finish(sb.storage.from('media').getPublicUrl(path).data.publicUrl);
+      finish('dm-media:'+path);
     });
   } else finish(null);
 }
