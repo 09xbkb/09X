@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-pack="midnight">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -87,7 +87,7 @@
   #access-code b{display:block;font-family:'Space Grotesk',sans-serif;font-size:1.2rem;letter-spacing:.3em;color:var(--ink);margin-top:6px}
 
   /* ============ APP SHELL ============ */
-  #app{position:relative;z-index:1;display:none;min-height:100svh}
+  #app{position:relative;z-index:1;display:none;min-height:100svh;flex-direction:column}
   .topbar{
     position:sticky;top:0;z-index:20;
     display:flex;align-items:center;justify-content:space-between;
@@ -107,7 +107,7 @@
     background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:.95rem;
   }
 
-  .shell{display:flex;max-width:1120px;margin:0 auto}
+  .shell{display:flex;flex:1;width:100%;max-width:1120px;margin:0 auto}
   .rail{display:none}
   main{flex:1;min-width:0;padding-bottom:76px}
 
@@ -130,6 +130,14 @@
   }
   .nav button .ico{font-size:1.15rem}
   .nav button.on{color:var(--accent2)}
+  .nav button .ico,.rail button .ico{display:inline-flex;align-items:center;justify-content:center}
+  .nav button .ico svg{width:21px;height:21px;display:block;fill:currentColor}
+  .rail button .ico svg{width:19px;height:19px;display:block;fill:currentColor}
+  /* per-theme icon looks */
+  html[data-pack="terminal"] .nav button .ico svg,html[data-pack="terminal"] .rail button .ico svg{fill:none;stroke:currentColor;stroke-width:1.7}
+  html[data-pack="solar"] .nav button .ico svg,html[data-pack="solar"] .rail button .ico svg{stroke:currentColor;stroke-width:2.1;stroke-linejoin:round}
+  html[data-pack="nebula"] .nav button .ico svg,html[data-pack="nebula"] .rail button .ico svg{fill:url(#navGrad)}
+  html[data-pack="nebula"] .nav button.on .ico svg,html[data-pack="nebula"] .rail button.on .ico svg{fill:currentColor}
 
   /* ============ FEED ============ */
   .composer-teaser{
@@ -529,6 +537,7 @@
   </div>
 
   <nav class="nav" id="nav"></nav>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="navGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent2)"/></linearGradient></defs></svg>
 </div>
 
 <!-- composer -->
@@ -691,7 +700,7 @@ function loadFeed(){
 function enterApp(u,silent){
   me=u;var md=u.user_metadata||{};
   myHandle=md.handle||('@'+(u.email||'you').split('@')[0]);
-  $('#login').style.display='none';$('#app').style.display='block';
+  $('#login').style.display='none';$('#app').style.display='flex';
   $('#prof-name').textContent=myHandle.replace(/^@/,'');
   $('#prof-handle').textContent=myHandle;
   $('#my-code').textContent=md.access_code||'—';
@@ -1239,10 +1248,17 @@ function renderShorts(){
 }
 
 /* ---------- nav ---------- */
-var tabs=[['feed','🏠','home'],['shorts','▶','vids'],['chat','💬','chat'],['comm','⬢','communities'],['prof','👤','you']];
+var navIcons={
+  feed:'<svg viewBox="0 0 24 24"><path d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z"/></svg>',
+  shorts:'<svg viewBox="0 0 24 24"><path d="M7 4.5v15l13-7.5z"/></svg>',
+  chat:'<svg viewBox="0 0 24 24"><path d="M6 3h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3H9l-6 5V6a3 3 0 0 1 3-3z"/></svg>',
+  comm:'<svg viewBox="0 0 24 24"><path d="M22 12 17 3.7H7L2 12l5 8.3h10z"/></svg>',
+  prof:'<svg viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="4"/><path d="M4 21c.8-4.2 4.2-6.5 8-6.5s7.2 2.3 8 6.5z"/></svg>'
+};
+var tabs=[['feed','home'],['shorts','vids'],['chat','chat'],['comm','communities'],['prof','you']];
 function buildNav(){
-  $('#nav').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+t[1]+'</span>'+t[2]+'</button>'}).join('');
-  $('#rail').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+t[1]+'</span>'+t[2]+'</button>'}).join('')+'<button class="btn" id="rail-post">+ post</button>';
+  $('#nav').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+navIcons[t[0]]+'</span>'+t[1]+'</button>'}).join('');
+  $('#rail').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+navIcons[t[0]]+'</span>'+t[1]+'</button>'}).join('')+'<button class="btn" id="rail-post">+ post</button>';
 }
 function go(tab){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on')});
@@ -1253,7 +1269,26 @@ function go(tab){
   if(tab==='chat'){peopleMode=false;loadConvos()}
   if(tab==='comm')loadComms();
   if(tab==='shorts')renderShorts();
+  healViewport();
   window.scrollTo(0,0);
+}
+
+/* ios standalone pwa shrinks the layout viewport when the keyboard opens and never
+   restores it, floating the fixed bottom nav ~59px up. flip a full-height element's
+   display to force a re-measure after the keyboard closes. */
+var maxVH=window.innerHeight;
+addEventListener('resize',function(){maxVH=Math.max(maxVH,window.innerHeight)});
+function healViewport(){
+  if(maxVH-window.innerHeight<=4)return;
+  var app=document.getElementById('app');
+  if(app.style.display!=='flex')return;
+  app.style.display='none';void app.offsetHeight;app.style.display='flex';
+}
+if(navigator.standalone){
+  document.addEventListener('blur',function(e){
+    if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'))setTimeout(healViewport,150);
+  },true);
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)healViewport()});
 }
 
 /* ---------- themes ---------- */
@@ -1291,7 +1326,7 @@ function setPack(name){
   var r=document.documentElement.style;
   r.setProperty('--bg',pk.bg);r.setProperty('--bg2',pk.bg2);r.setProperty('--card',pk.card);
   r.setProperty('--ink',pk.ink);r.setProperty('--dim',pk.dim);r.setProperty('--faint',pk.faint);
-  localStorage.setItem('xy-pack',name);
+  localStorage.setItem('xy-pack',name);document.documentElement.dataset.pack=name;
   setTheme(packAccents[name]);
   document.querySelectorAll('#packs .swatch').forEach(function(s){s.classList.toggle('on',s.dataset.pack===name)});
 }
