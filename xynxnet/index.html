@@ -290,6 +290,49 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   .prof-head .bio{margin-top:10px;font-size:.9rem;color:var(--dim);line-height:1.5}
   .pfp img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
   .prof-banner{background-size:cover;background-position:center}
+  /* v3 batch 5: live profile backgrounds + profile song */
+  .livebg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+  .livebg i{position:absolute;border-radius:50%;filter:blur(80px);opacity:.45}
+  .livebg.aurora i:nth-child(1){width:80vmax;height:80vmax;left:-25vmax;top:-30vmax;background:radial-gradient(circle,#14b8a6,transparent 62%);animation:lbdrift1 24s ease-in-out infinite alternate}
+  .livebg.aurora i:nth-child(2){width:70vmax;height:70vmax;right:-30vmax;top:-10vmax;background:radial-gradient(circle,#8b5cf6,transparent 62%);animation:lbdrift2 30s ease-in-out infinite alternate}
+  .livebg.aurora i:nth-child(3){width:60vmax;height:60vmax;left:10vmax;bottom:-35vmax;background:radial-gradient(circle,#e879f9,transparent 62%);animation:lbdrift3 27s ease-in-out infinite alternate}
+  .livebg.nebula i:nth-child(1){width:75vmax;height:75vmax;left:-20vmax;top:-20vmax;background:radial-gradient(circle,#7c3aed,transparent 60%);animation:lbdrift1 38s ease-in-out infinite alternate}
+  .livebg.nebula i:nth-child(2){width:65vmax;height:65vmax;right:-25vmax;top:20vmax;background:radial-gradient(circle,#db2777,transparent 60%);animation:lbdrift2 44s ease-in-out infinite alternate}
+  .livebg.nebula i:nth-child(3){width:55vmax;height:55vmax;left:20vmax;bottom:-30vmax;background:radial-gradient(circle,#4f46e5,transparent 60%);animation:lbdrift3 41s ease-in-out infinite alternate}
+  .livebg.warp i:nth-child(1){width:90vmax;height:90vmax;left:-30vmax;top:-30vmax;background:conic-gradient(from 0deg,#0ea5e9,transparent 30%,#8b5cf6 50%,transparent 70%,#0ea5e9);animation:lbspin 9s linear infinite}
+  .livebg.warp i:nth-child(2){width:80vmax;height:80vmax;right:-35vmax;bottom:-35vmax;background:conic-gradient(from 180deg,#22d3ee,transparent 35%,#e879f9 55%,transparent 75%,#22d3ee);animation:lbspin 12s linear infinite reverse}
+  .livebg.warp i:nth-child(3){display:none}
+  .livebg.acidvoid i:nth-child(1){width:70vmax;height:70vmax;left:-20vmax;top:-20vmax;background:radial-gradient(circle,#a3e635,transparent 58%);animation:lbpulse 6s ease-in-out infinite}
+  .livebg.acidvoid i:nth-child(2){width:60vmax;height:60vmax;right:-25vmax;top:30vmax;background:radial-gradient(circle,#f0abfc,transparent 58%);animation:lbpulse 8s ease-in-out infinite reverse}
+  .livebg.acidvoid i:nth-child(3){width:55vmax;height:55vmax;left:15vmax;bottom:-30vmax;background:radial-gradient(circle,#65a30d,transparent 58%);animation:lbpulse 7s ease-in-out infinite}
+  @keyframes lbdrift1{to{transform:translate(12vmax,9vmax) scale(1.15)}}
+  @keyframes lbdrift2{to{transform:translate(-11vmax,12vmax) scale(.9)}}
+  @keyframes lbdrift3{to{transform:translate(-9vmax,-11vmax) scale(1.1)}}
+  @keyframes lbspin{to{transform:rotate(360deg)}}
+  @keyframes lbpulse{50%{opacity:.18;transform:scale(.85)}}
+  @media (prefers-reduced-motion:reduce){.livebg i{animation:none}}
+  .lcard{margin:14px 16px 0;padding:14px;border:1px solid var(--line);border-radius:16px;background:rgba(14,14,24,.72);backdrop-filter:blur(8px);position:relative;z-index:2}
+  .lcard-h{font-size:.68rem;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;margin-bottom:10px}
+  .lcard-h b{color:var(--dim)}
+  .psong{display:flex;align-items:center;gap:10px}
+  .psong-art{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#8b5cf6,#22d3ee);display:grid;place-items:center;font-size:1.2rem;color:#0a0a14;flex:none}
+  .psong-meta{flex:1;min-width:0}
+  .psong-meta b{display:block;font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .psong-meta span{font-size:.72rem;color:var(--faint)}
+  .psong-bar{height:3px;border-radius:2px;background:rgba(255,255,255,.1);margin-top:7px;overflow:hidden}
+  .psong-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#8b5cf6,#22d3ee);transition:width .25s linear}
+  .psong-time{font-size:.72rem;color:var(--dim);flex:none}
+  .psong-act{display:flex;gap:8px;margin-top:10px}
+  .psong-act button{font-size:.7rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--dim)}
+  .bgrow{display:flex;align-items:center;gap:8px}
+  .bgsw{width:40px;height:40px;border-radius:12px;border:2px solid transparent;flex:none}
+  .bgsw.on{border-color:#fff}
+  .bgsw.aurora{background:linear-gradient(135deg,#14b8a6,#8b5cf6,#e879f9)}
+  .bgsw.nebula{background:linear-gradient(135deg,#7c3aed,#db2777,#4f46e5)}
+  .bgsw.warp{background:conic-gradient(from 0deg,#0ea5e9,#8b5cf6,#e879f9,#0ea5e9)}
+  .bgsw.acidvoid{background:linear-gradient(135deg,#a3e635,#65a30d 55%,#f0abfc)}
+  .bgsw.boff{background:rgba(255,255,255,.06);color:var(--faint);font-size:.68rem;display:grid;place-items:center}
+  .bgnames{font-size:.72rem;color:var(--faint);margin-left:4px}
   .founder{display:inline-block;font-size:.55rem;font-weight:700;letter-spacing:.12em;padding:2px 8px;border-radius:999px;vertical-align:2px;margin-left:6px;background:linear-gradient(115deg,#f59e0b,#e879f9);color:#0a0a14}
   .prof-bio{font-size:.85rem;color:var(--dim);margin-top:8px}
   .edit-row{display:flex;gap:10px;margin-top:10px}
@@ -560,6 +603,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
             <div><b id="stat-comments">0</b> <span>comments</span></div>
           </div>
         </div>
+        <div id="prof-livecards"></div>
         <div id="prof-feed"></div>
         <h3 class="saved-h">🔖 saved</h3>
         <div id="prof-saved"></div>
@@ -589,6 +633,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
             <button class="edit-btn" id="chan-report" style="font-size:.72rem;padding:7px 14px">report</button>
           </div>
         </div>
+        <div id="chan-livecards"></div>
         <div id="chan-feed"></div>
       </section>
 
@@ -708,6 +753,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     <div class="attach-row" style="padding:0 0 10px">
       <button id="banner-btn">🌌 banner</button>
       <input type="file" id="banner-input" accept="image/*" hidden>
+      <input type="file" id="song-input" accept="audio/*" hidden>
       <span id="banner-name" style="font-size:.72rem;color:var(--faint);align-self:center"></span>
     </div>
     <textarea id="bio-text" placeholder="your bio" style="min-height:60px"></textarea>
@@ -903,6 +949,7 @@ function paintMyProfile(){
   if(myProfile.avatar_url)$('#prof-pfp').innerHTML='<img src="'+esc(myProfile.avatar_url)+'" alt="">';
   if(myProfile.banner_url)$('#prof-banner').style.backgroundImage='url('+myProfile.banner_url+')';
   $('#prof-bio').textContent=myProfile.bio||'';
+  renderLiveCards();
   if(myProfile.is_founder&&!$('#prof-name .founder').length)$('#prof-name').innerHTML=esc(myHandle.replace(/^@/,''))+'<span class="founder">★ FOUNDER</span>';
   if(document.activeElement!==$('#bio-text'))$('#bio-text').value=myProfile.bio||'';
 }
@@ -1414,6 +1461,120 @@ function playVoice(btn){
   else go(mu);
 }
 
+/* ---------- v3 batch 5: live profile backgrounds + profile song ---------- */
+var LIVEBGS={aurora:'aurora',nebula:'nebula drift',warp:'warp',acidvoid:'acid-void'};
+var profAudio=null,profAudioUrl=null;
+function liveBgOf(p){return p&&p.bg_live&&LIVEBGS[p.bg_live]?p.bg_live:null}
+function applyLiveBg(name){
+  document.querySelectorAll('.livebg').forEach(function(e){e.remove()});
+  if(!name)return;
+  var d=document.createElement('div');
+  d.className='livebg '+name;
+  d.innerHTML='<i></i><i></i><i></i>';
+  document.body.appendChild(d);
+}
+function renderLiveCards(){
+  /* which profile is being viewed? */
+  var onProf=$('#s-prof').classList.contains('on'), onChan=$('#s-channel').classList.contains('on');
+  if(onProf&&myProfile)paintLiveCards($('#prof-livecards'),myProfile,true);
+  if(onChan&&openChannel)paintLiveCards($('#chan-livecards'),openChannel,false);
+  var viewing=onProf?myProfile:onChan?openChannel:null;
+  applyLiveBg(viewing?liveBgOf(viewing):null);
+}
+function paintLiveCards(box,p,isOwn){
+  if(!box)return;
+  var html='';
+  /* profile song */
+  if(p.song_url||isOwn){
+    html+='<div class="lcard"><div class="lcard-h">Profile Song</div>';
+    if(p.song_url){
+      var playing=profAudio&&profAudioUrl===p.song_url&&!profAudio.paused;
+      html+='<div class="psong"><div class="psong-art">♪</div><div class="psong-meta"><b>'+esc(p.song_title||'song')+'</b><span>@'+esc(p.username||'')+'</span>'
+        +'<div class="psong-bar"><i id="psong-fill"></i></div></div>'
+        +'<span class="psong-time" id="psong-time">0:00</span>'
+        +'<button class="vplay psong-play" data-song="'+esc(p.song_url)+'">'+(playing?'⏸':'▶')+'</button></div>';
+      if(isOwn)html+='<div class="psong-act"><button id="song-change">change</button><button id="song-remove">remove</button></div>';
+    }else{
+      html+='<div class="psong-act" style="margin-top:0"><button id="song-add">+ add a profile song</button></div>';
+    }
+    html+='</div>';
+  }
+  /* live background */
+  if(isOwn||liveBgOf(p)){
+    html+='<div class="lcard"><div class="lcard-h">Live Background'+(liveBgOf(p)?' · <b>'+LIVEBGS[liveBgOf(p)]+'</b>':'')+'</div><div class="bgrow">';
+    Object.keys(LIVEBGS).forEach(function(k){
+      html+='<button class="bgsw '+k+(liveBgOf(p)===k?' on':'')+'" data-bg="'+k+'" title="'+LIVEBGS[k]+'"></button>';
+    });
+    if(isOwn)html+='<button class="bgsw boff'+(!liveBgOf(p)?' on':'')+'" data-bg="">off</button>';
+    else html+='<span class="bgnames">'+Object.keys(LIVEBGS).filter(function(k){return k!==liveBgOf(p)}).map(function(k){return LIVEBGS[k]}).join(' · ')+'</span>';
+    html+='</div></div>';
+  }
+  box.innerHTML=html;
+}
+function setLiveBg(name){
+  if(!me||!myProfile)return;
+  sb.from('profiles').update({bg_live:name||null}).eq('id',me.id).then(function(r){
+    if(r.error){toast('could not save background');return}
+    myProfile.bg_live=name||null;
+    if(profilesByHandle[myHandle.toLowerCase()])profilesByHandle[myHandle.toLowerCase()].bg_live=name||null;
+    renderLiveCards();
+    toast(name?('background: '+LIVEBGS[name]):'background off');
+  });
+}
+function fmtSongTime(s){s=Math.max(0,Math.floor(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function toggleProfSong(url,btn){
+  if(profAudio&&profAudioUrl===url){
+    if(profAudio.paused){profAudio.play()}else{profAudio.pause()}
+    return;
+  }
+  if(profAudio){profAudio.pause();profAudio=null;profAudioUrl=null}
+  profAudio=new Audio(url);profAudioUrl=url;
+  profAudio.addEventListener('timeupdate',function(){
+    var f=$('#psong-fill');if(f&&profAudio.duration)f.style.width=(profAudio.currentTime/profAudio.duration*100)+'%';
+    var t=$('#psong-time');if(t)t.textContent=fmtSongTime(profAudio.currentTime)+' / '+fmtSongTime(profAudio.duration);
+  });
+  profAudio.addEventListener('pause',function(){var b=document.querySelector('.psong-play');if(b)b.textContent='▶'});
+  profAudio.addEventListener('play',function(){var b=document.querySelector('.psong-play');if(b)b.textContent='⏸'});
+  profAudio.addEventListener('ended',function(){var f=$('#psong-fill');if(f)f.style.width='0'});
+  profAudio.play().catch(function(){toast('tap play again - browser blocked it')});
+}
+function uploadSong(file){
+  if(!me||!file)return;
+  if(file.size>15*1024*1024){toast('keep songs under 15MB');return}
+  var ext=(file.name.split('.').pop()||'mp3').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp3';
+  var title=file.name.replace(/\.[^.]+$/,'').slice(0,48)||'song';
+  var path='profiles/'+me.id+'/song-'+Date.now()+'.'+ext;
+  toast('uploading song...');
+  sb.storage.from('media').upload(path,file).then(function(r){
+    if(r.error){toast('upload failed: '+r.error.message);return}
+    var url=sb.storage.from('media').getPublicUrl(path).data.publicUrl;
+    var old=myProfile.song_url;
+    sb.from('profiles').update({song_url:url,song_title:title}).eq('id',me.id).then(function(u){
+      if(u.error){toast('save failed');return}
+      myProfile.song_url=url;myProfile.song_title=title;
+      if(profilesByHandle[myHandle.toLowerCase()]){profilesByHandle[myHandle.toLowerCase()].song_url=url;profilesByHandle[myHandle.toLowerCase()].song_title=title}
+      if(old)removeSongFile(old);
+      renderLiveCards();toast('profile song set');
+    });
+  });
+}
+function removeSongFile(url){
+  var m=String(url).match(/\/media\/(.+)$/);
+  if(m)sb.storage.from('media').remove([decodeURIComponent(m[1])]).then(function(){});
+}
+function removeSong(){
+  if(!me||!myProfile||!myProfile.song_url)return;
+  var old=myProfile.song_url;
+  sb.from('profiles').update({song_url:null,song_title:null}).eq('id',me.id).then(function(r){
+    if(r.error){toast('could not remove');return}
+    if(profAudio){profAudio.pause();profAudio=null;profAudioUrl=null}
+    myProfile.song_url=null;myProfile.song_title=null;
+    if(profilesByHandle[myHandle.toLowerCase()]){profilesByHandle[myHandle.toLowerCase()].song_url=null;profilesByHandle[myHandle.toLowerCase()].song_title=null}
+    removeSongFile(old);
+    renderLiveCards();toast('song removed');
+  });
+}
+
 /* private DM photos: stored as 'dm-media:<sender>/<recipient>/file' in a private bucket, shown via short-lived signed URLs */
 var dmUrlCache={};
 function dmImgTag(mu){
@@ -1636,8 +1797,10 @@ function go(tab){
   document.querySelectorAll('[data-tab]').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
   if(tab!=='chat'){$('#chat-list').style.display='';$('#s-chat .chat-head').style.display='';$('#convo').style.display='none';openChatUser=null;clearInterval(chatPoll)}
   if(tab!=='comm'){$('#comms').style.display='';$('#s-comm .chat-head').style.display='';$('#comm-view').style.display='none';openComm=null}
+  if(tab!=='prof'&&tab!=='channel')applyLiveBg(null);
   if(tab==='chat'){peopleMode=false;loadConvos()}
   if(tab==='comm')loadComms();
+  if(tab==='prof'||tab==='channel')renderLiveCards();
   if(tab==='shorts')renderShorts();
   healViewport();
   window.scrollTo(0,0);
@@ -1824,12 +1987,13 @@ function syncAppBadge(){
 
 /* ---------- v3: xx numbers, logo menu, block/report ---------- */
 var myXX=null,iBlocked={},blockedMe={};
-var menuShipped={dial:true,saved:true,settings:true,notifs:true};
+var menuShipped={dial:true,saved:true,settings:true,notifs:true,livebg:true};
 var menuDef=[
   ['constellation','✦','Constellation'],
   ['dial','☎️','Phone Dial'],
   ['saved','🚀','Saved'],
   ['notifs','🔔','Notifications'],
+  ['livebg','🌌','Live BG + Song'],
   ['invites','🎟','Invite Codes'],
   ['night','🌙','Night Mode'],
   ['settings','⚙️','Settings']
@@ -1866,6 +2030,7 @@ function menuGo(k){
   if(k==='dial')openDial();
   else if(k==='saved'){go('prof');setTimeout(function(){var el=document.querySelector('.saved-h');if(el)el.scrollIntoView({behavior:'smooth'})},150)}
   else if(k==='notifs')openNotifPrefs();
+  else if(k==='livebg')go('prof');
   else if(k==='settings')$('#themes').classList.add('on');
 }
 function loadBlocks(cb){
@@ -2011,7 +2176,7 @@ function openQR(){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#push-enable,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#timer-chip,#receipts-chip,.vplay,#msg-mic,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-lp],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#push-enable,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#timer-chip,#receipts-chip,.vplay,#msg-mic,#msg-pic,#song-add,#song-change,#song-remove,.psong-play,[data-bg],#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-lp],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
   if(!t)return;
   if(t.id==='logo-btn'){var lm=$('#logo-menu');if(lm.classList.contains('on'))lm.classList.remove('on');else openMenu();return}
   if(t.dataset.menu!==undefined){menuGo(t.dataset.menu);return}
@@ -2080,6 +2245,10 @@ document.addEventListener('click',function(e){
   else if(t.id==='timer-chip')cycleTimer();
   else if(t.id==='receipts-chip')toggleReceipts();
   else if(t.classList.contains('vplay'))playVoice(t);
+  else if(t.id==='song-add'||t.id==='song-change')$('#song-input').click();
+  else if(t.id==='song-remove')removeSong();
+  else if(t.classList.contains('psong-play'))toggleProfSong(t.dataset.song,t);
+  else if(t.dataset.bg!==undefined&&t.closest('#prof-livecards'))setLiveBg(t.dataset.bg);
   else if(t.id==='push-enable')enablePush();
   else if(t.dataset.reactadd!==undefined){var ro=$('#ropts-'+t.dataset.reactadd);if(ro)ro.style.display=ro.style.display==='none'?'flex':'none'}
   else if(t.dataset.lp!==undefined)lpAct(t.dataset.lp);
@@ -2126,8 +2295,7 @@ document.addEventListener('keydown',function(e){
 $('#pic-input').addEventListener('change',function(){if(this.files[0])$('#vid-input').value='';$('#pic-name').textContent=this.files[0]?this.files[0].name:''});
 $('#vid-input').addEventListener('change',function(){if(this.files[0])$('#pic-input').value='';$('#pic-name').textContent=this.files[0]?this.files[0].name:''});
 $('#avatar-input').addEventListener('change',function(){$('#avatar-name').textContent=this.files[0]?this.files[0].name:''});
-$('#banner-input').addEventListener('change',function(){$('#banner-name').textContent=this.files[0]?this.files[0].name:''});
-document.querySelectorAll('.modal').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('on')})});
+$('#banner-input').addEventListener('change',function(){$('#banner-name').textContent=this.files[0]?this.files[0].name:''});document.querySelectorAll('.modal').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('on')})});
 $('#logo-menu').addEventListener('click',function(e){if(e.target===this)this.classList.remove('on')});
 
 applyStoredTheme();renderFeed();renderShorts();buildNav();renderSwatches();go('feed');
