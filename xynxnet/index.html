@@ -377,6 +377,14 @@
     <input id="pw" type="password" placeholder="••••••••">
     <button class="btn" id="enter-btn">enter the network</button>
     <p class="alt">new here? same button makes your account</p>
+    <p class="alt" style="margin-top:8px"><b id="forgot-link">forgot your password?</b></p>
+    <div id="reset-card" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px">
+      <label for="reset-code">access code</label>
+      <input id="reset-code" type="text" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters">
+      <label for="reset-pw">new password</label>
+      <input id="reset-pw" type="password" placeholder="••••••••">
+      <button class="btn" id="reset-btn">reset it</button>
+    </div>
   </div>
   <p class="sub" style="margin-top:34px;font-size:.62rem">v2 · the dark network, expanding</p>
 </section>
@@ -726,6 +734,31 @@ function doSaveProfile(){
       toast('profile updated. looking sharp');
     });
   });
+}
+function doReset(){
+  var h=$('#handle').value.trim().replace(/^@/,'');
+  var code=$('#reset-code').value.trim().toUpperCase();
+  var np=$('#reset-pw').value;
+  if(!h){toast('enter your handle up top first');return}
+  if(!code){toast('your access code lives in themes');return}
+  if(np.length<6){toast('new password needs 6+ characters');return}
+  toast('checking your code...');
+  fetch('https://yklwqghinvyhylsdrihp.supabase.co/functions/v1/reset-password',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer sb_publishable_EBLJEpTurwp8U_LwhmAQmQ_h-HZFHcu'},
+    body:JSON.stringify({handle:h,access_code:code,new_password:np})
+  }).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j}})}).then(function(res){
+    if(res.ok&&res.j&&res.j.ok){
+      toast('password reset. signing you in...');
+      var email=h.toLowerCase().replace(/[^a-z0-9._-]/g,'')+'@xynxnet.app';
+      sb.auth.signInWithPassword({email:email,password:np}).then(function(r2){
+        if(r2.error){toast('reset worked - now sign in with the new password');return}
+        enterApp(r2.data.user);
+      });
+    }else{
+      toast((res.j&&res.j.error)||'reset failed - wrong code?');
+    }
+  }).catch(function(){toast('reset service unreachable right now')});
 }
 function doAuth(){
   var h=$('#handle').value.trim().replace(/^@/,'');
@@ -1267,7 +1300,7 @@ function applyStoredTheme(){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-scomm],[data-chan],.comm');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-scomm],[data-chan],.comm');
   if(!t)return;
   if(t.dataset.tab)go(t.dataset.tab);
   else if(t.id==='chan-follow')toggleFollow();
@@ -1316,6 +1349,8 @@ document.addEventListener('click',function(e){
   else if(t.id==='save-profile')doSaveProfile();
   else if(t.id==='new-chat-btn')openPeople();
   else if(t.id==='new-comm-btn'){if(!me){toast('sign in first');return}$('#new-comm').classList.add('on')}
+  else if(t.id==='forgot-link'){var rc=$('#reset-card');rc.style.display=rc.style.display==='none'?'block':'none'}
+  else if(t.id==='reset-btn')doReset();
   else if(t.id==='notif-btn')openNotifs();
   else if(t.id==='search-btn'){go('search');loadComms()}
   else if(t.id==='msg-pic')$('#msg-pic-input').click();
