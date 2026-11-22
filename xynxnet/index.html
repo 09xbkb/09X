@@ -1223,6 +1223,10 @@ function openChannelByHandle(handle){
   if(!p){toast('no channel found for '+h);return}
   if(blockedMe[p.id]){toast('that channel is not available to you');return}
   openChannel=p;
+  /* refresh this profile so live bg / song / bio are current, then re-render the cards */
+  sb.from('profiles').select('*').eq('id',p.id).maybeSingle().then(function(r){
+    if(r.data){profilesByHandle[h]=r.data;if(openChannel&&openChannel.id===r.data.id){openChannel=r.data;renderLiveCards()}}
+  });
   $('#chan-banner').style.backgroundImage=p.banner_url?'url('+p.banner_url+')':'';
   $('#chan-pfp').outerHTML=avatarPfp(h,esc((p.username||'?').slice(0,2)),['hsl(260,70%,55%)','hsl(320,70%,50%)','hsl(200,70%,60%)'],'lg').replace('class="pfp','id="chan-pfp" class="pfp');
   $('#chan-name').innerHTML=esc(p.display_name||p.username)+founderBadge(h);
@@ -2309,4 +2313,4 @@ sb.auth.getSession().then(function(r){if(r.data&&r.data.session)enterApp(r.data.
 })();
 </script>
 </body>
-                                               </html>
+  </html>
