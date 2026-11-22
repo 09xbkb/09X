@@ -340,6 +340,15 @@
     .modal{align-items:center}
     .sheet{border-radius:22px}
   }
+  .vids-list{display:flex;flex-direction:column;gap:16px;padding:14px}
+  .vid{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .vid video{width:100%;max-height:65svh;background:#000;display:block}
+  .vid .vmeta{padding:12px 14px 4px}
+  .vid .vmeta .who{display:flex;align-items:center;gap:8px;font-weight:600;font-size:.9rem}
+  .vid .vmeta p{color:var(--dim);font-size:.85rem;margin:6px 0 0;line-height:1.45}
+  .vid .vfoot{display:flex;gap:8px;padding:10px 14px 14px;align-items:center}
+  .vid .vfoot button{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.8rem}
+  .post .head{cursor:pointer}
   @media(prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
   }
@@ -360,7 +369,7 @@
     <button class="btn" id="enter-btn">enter the network</button>
     <p class="alt">new here? same button makes your account</p>
   </div>
-  <p class="sub" style="margin-top:34px;font-size:.62rem">v1 · accounts live · posts persist for real</p>
+  <p class="sub" style="margin-top:34px;font-size:.62rem">v2 · the dark network, expanding</p>
 </section>
 
 <!-- ================= APP ================= -->
@@ -387,7 +396,8 @@
 
       <!-- SHORTS -->
       <section class="screen" id="s-shorts">
-        <div class="shorts-rail" id="shorts"></div>
+        <div class="chat-head"><h2>vids</h2></div>
+        <div class="vids-list" id="shorts"></div>
       </section>
 
       <!-- CHAT -->
@@ -449,11 +459,36 @@
           <p class="prof-bio" id="prof-bio"></p>
           <div class="prof-stats">
             <div><b id="stat-posts">0</b> <span>posts</span></div>
+            <div><b id="stat-followers">0</b> <span>followers</span></div>
+            <div><b id="stat-following">0</b> <span>following</span></div>
             <div><b id="stat-joined">0</b> <span>communities</span></div>
             <div><b id="stat-comments">0</b> <span>comments</span></div>
           </div>
         </div>
         <div id="prof-feed"></div>
+      </section>
+
+      <!-- CHANNEL -->
+      <section class="screen" id="s-channel">
+        <div class="prof-banner" id="chan-banner"><div class="slide"></div></div>
+        <div class="prof-head">
+          <div class="row">
+            <div class="pfp lg" id="chan-pfp" style="--a1:#8b5cf6;--a2:#22d3ee;--a3:#e879f9">·</div>
+            <div class="edit-row">
+              <button class="edit-btn" id="chan-follow">follow</button>
+              <button class="edit-btn" id="chan-msg">message</button>
+            </div>
+          </div>
+          <h2 id="chan-name"></h2>
+          <span class="handle" id="chan-handle"></span>
+          <p class="prof-bio" id="chan-bio"></p>
+          <div class="prof-stats">
+            <div><b id="chan-posts">0</b> <span>posts</span></div>
+            <div><b id="chan-followers">0</b> <span>followers</span></div>
+            <div><b id="chan-following">0</b> <span>following</span></div>
+          </div>
+        </div>
+        <div id="chan-feed"></div>
       </section>
 
     </main>
@@ -581,18 +616,18 @@ var profilesByHandle={},myProfile=null;
 function loadProfiles(cb){
   sb.from('profiles').select('*').limit(500).then(function(r){
     profilesByHandle={};
-    (r.data||[]).forEach(function(p){profilesByHandle['@'+p.username]=p});
-    if(me)myProfile=profilesByHandle[myHandle]||null;
+    (r.data||[]).forEach(function(p){profilesByHandle[('@'+p.username).toLowerCase()]=p});
+    if(me)myProfile=profilesByHandle[myHandle.toLowerCase()]||null;
     if(cb)cb();
   });
 }
 function avatarPfp(handle,init,colors,cls){
-  var p=profilesByHandle[handle];
+  var p=profilesByHandle[String(handle||'').toLowerCase()];
   if(p&&p.avatar_url)return '<div class="pfp '+(cls||'')+'"><img src="'+esc(p.avatar_url)+'" alt=""></div>';
   return pfp({init:init,c:colors},cls);
 }
 function founderBadge(handle){
-  var p=profilesByHandle[handle];
+  var p=profilesByHandle[String(handle||'').toLowerCase()];
   return (p&&p.is_founder)?'<span class="founder">★ FOUNDER</span>':'';
 }
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -613,7 +648,7 @@ function enterApp(u,silent){
   $('#teaser-pfp').textContent=myHandle.replace(/^@/,'').slice(0,2);
   $('#prof-pfp').textContent=myHandle.replace(/^@/,'').slice(0,2);
   loadFeed();loadComments(function(){renderFeed();renderShorts()});
-  loadProfiles(function(){paintMyProfile();renderFeed()});
+  loadProfiles(function(){paintMyProfile();renderFeed()});loadFollows();
   if(!silent)toast('welcome to the network, '+myHandle);
 }
 function paintMyProfile(){
@@ -716,11 +751,72 @@ function doShare(pid){
 
 function isVideo(url){return /\.(mp4|webm|mov|m4v)(\?|$)/i.test(url||'')}
 function miniPfp(handle){
-  var pr=profilesByHandle[handle];
+  var pr=profilesByHandle[String(handle||'').toLowerCase()];
   if(pr&&pr.avatar_url)return '<div class="pfp"><img src="'+esc(pr.avatar_url)+'" alt=""></div>';
   var name=String(handle||'@?').replace(/^@/,'');var hue=0;
   for(var k=0;k<name.length;k++)hue=(hue*31+name.charCodeAt(k))%360;
   return pfp({init:esc(name.slice(0,2)||'?'),c:['hsl('+hue+',70%,55%)','hsl('+((hue+60)%360)+',70%,50%)','hsl('+((hue+300)%360)+',70%,60%)']});
+}
+
+/* ---------- follows + channels ---------- */
+var myFollowing={},followerCounts={},followingCounts={};
+function loadFollows(cb){
+  sb.from('follows').select('*').limit(2000).then(function(r){
+    myFollowing={};followerCounts={};followingCounts={};
+    (r.data||[]).forEach(function(f){
+      followerCounts[f.following]=(followerCounts[f.following]||0)+1;
+      followingCounts[f.follower]=(followingCounts[f.follower]||0)+1;
+      if(me&&f.follower===me.id)myFollowing[f.following]=true;
+    });
+    if(me){
+      var sf=$('#stat-followers');if(sf)sf.textContent=followerCounts[me.id]||0;
+      var sg=$('#stat-following');if(sg)sg.textContent=followingCounts[me.id]||0;
+    }
+    if(cb)cb();
+  });
+}
+var openChannel=null;
+function openChannelByHandle(handle){
+  var h=String(handle||'').toLowerCase();
+  if(me&&h===myHandle.toLowerCase()){go('prof');return}
+  var p=profilesByHandle[h];
+  if(!p){toast('no channel found for '+h);return}
+  openChannel=p;
+  $('#chan-banner').style.backgroundImage=p.banner_url?'url('+p.banner_url+')':'';
+  $('#chan-pfp').outerHTML=avatarPfp(h,esc((p.username||'?').slice(0,2)),['hsl(260,70%,55%)','hsl(320,70%,50%)','hsl(200,70%,60%)'],'lg').replace('class="pfp','id="chan-pfp" class="pfp');
+  $('#chan-name').innerHTML=esc(p.display_name||p.username)+founderBadge(h);
+  $('#chan-handle').textContent='@'+p.username;
+  $('#chan-bio').textContent=p.bio||'';
+  var theirs=posts.filter(function(pp){return pp.author===p.id});
+  $('#chan-posts').textContent=theirs.length;
+  $('#chan-followers').textContent=followerCounts[p.id]||0;
+  $('#chan-following').textContent=followingCounts[p.id]||0;
+  var fb=$('#chan-follow');var j=!!myFollowing[p.id];
+  fb.textContent=j?'following ✓':'follow';fb.classList.toggle('joined',j);
+  $('#chan-feed').innerHTML=theirs.length?theirs.map(function(pp){return postHTML(pp,likedSet[pp.id])}).join(''):'<div class="post" style="text-align:center;color:var(--faint);padding:24px">no posts yet.</div>';
+  go('channel');
+}
+function toggleFollow(){
+  if(!me){toast('sign in to follow');return}
+  if(!openChannel)return;
+  var uid=openChannel.id;
+  if(myFollowing[uid]){
+    sb.from('follows').delete().eq('follower',me.id).eq('following',uid).then(function(r){
+      if(r.error){toast('unfollow failed');return}
+      loadFollows(function(){if(openChannel)openChannelByHandle('@'+openChannel.username)});
+    });
+  }else{
+    sb.from('follows').insert({follower:me.id,following:uid}).then(function(r){
+      if(r.error){toast('follow failed: '+r.error.message);return}
+      toast('following @'+openChannel.username);
+      loadFollows(function(){if(openChannel)openChannelByHandle('@'+openChannel.username)});
+    });
+  }
+}
+function channelMessage(){
+  if(!openChannel)return;
+  openConvoByUser(openChannel.id,'@'+openChannel.username);
+  go('chat');$('#chat-list').style.display='none';$('#s-chat .chat-head').style.display='none';$('#convo').style.display='flex';
 }
 
 /* ---------- real chat ---------- */
@@ -875,7 +971,7 @@ function postHTML(p,liked){
     :'<div class="media"><img src="'+esc(p.media_url)+'" alt="" loading="lazy"></div>'):'';
   var per={init:esc((name.slice(0,2)||'?')),c:['hsl('+hue+',70%,55%)','hsl('+((hue+60)%360)+',70%,50%)','hsl('+((hue+300)%360)+',70%,60%)']};
   return '<article class="post" data-pid="'+p.id+'">'
-    +'<div class="head">'+avatarPfp(p.handle,per.init,per.c)+'<div class="who"><b>'+name+founderBadge(p.handle)+'</b><span>'+esc(p.handle)+' · '+ago(p.created_at)+'</span></div></div>'
+    +'<div class="head" data-chan="'+esc(p.handle)+'">'+avatarPfp(p.handle,per.init,per.c)+'<div class="who"><b>'+name+founderBadge(p.handle)+'</b><span>'+esc(p.handle)+' · '+ago(p.created_at)+'</span></div></div>'
     +'<div class="body">'+esc(p.text)+'</div>'+m
     +'<div class="foot">'
     +'<button class="like'+(liked?' liked':'')+'" data-like="'+p.id+'">'+(liked?'❤️':'🤍')+' <span>'+p.likes+'</span></button>'
@@ -898,15 +994,17 @@ function renderFeed(){
 function renderShorts(){
   var vids=posts.filter(function(p){return isVideo(p.media_url)});
   $('#shorts').innerHTML=vids.length?vids.map(function(s){
-    return '<div class="short"><video class="bg" src="'+esc(s.media_url)+'" autoplay muted loop playsinline></video><div class="overlay"></div>'
-      +'<div class="meta"><div class="who">'+miniPfp(s.handle)+esc(s.handle)+'</div><p>'+esc(s.text)+'</p></div>'
-      +'<div class="side"><button data-like="'+s.id+'">🤍<span>'+s.likes+'</span></button><button data-comment="'+s.id+'">💬<span>'+(commentsByPost[s.id]||[]).length+'</span></button><button data-share="'+s.id+'">↗<span>share</span></button></div>'
+    var name=esc(String(s.handle||'@ghost').replace(/^@/,''));
+    return '<div class="vid"><video src="'+esc(s.media_url)+'" controls playsinline preload="metadata"></video>'
+      +'<div class="vmeta"><div style="flex:1;min-width:0"><div class="who" data-chan="'+esc(s.handle)+'">'+miniPfp(s.handle)+'<span>'+name+'</span>'+founderBadge(s.handle)+'</div>'
+      +'<p>'+esc(s.text)+'</p></div></div>'
+      +'<div class="vfoot"><button data-like="'+s.id+'">'+(likedSet[s.id]?'❤️':'🤍')+' '+s.likes+'</button><button data-comment="'+s.id+'">💬 '+(commentsByPost[s.id]||[]).length+'</button><button data-share="'+s.id+'">↗ share</button><span style="margin-left:auto;font-size:.72rem;color:var(--faint)">'+ago(s.created_at)+'</span></div>'
       +'</div>';
-  }).join(''):'<div class="short" style="display:grid;place-items:center"><p style="color:var(--faint);text-align:center;padding:0 40px">no shorts yet. post a video from the feed and it shows up here.</p></div>';
+  }).join(''):'<div style="text-align:center;color:var(--faint);padding:60px 40px">no vids yet. post a video from the feed and it shows up here.</div>';
 }
 
 /* ---------- nav ---------- */
-var tabs=[['feed','🏠','home'],['shorts','⚡','shorts'],['chat','💬','chat'],['comm','⬢','communities'],['prof','👤','you']];
+var tabs=[['feed','🏠','home'],['shorts','▶','vids'],['chat','💬','chat'],['comm','⬢','communities'],['prof','👤','you']];
 function buildNav(){
   $('#nav').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+t[1]+'</span>'+t[2]+'</button>'}).join('');
   $('#rail').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+t[1]+'</span>'+t[2]+'</button>'}).join('')+'<button class="btn" id="rail-post">+ post</button>';
@@ -941,9 +1039,12 @@ function setTheme(i){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,.comm');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,[data-chan],.comm');
   if(!t)return;
   if(t.dataset.tab)go(t.dataset.tab);
+  else if(t.id==='chan-follow')toggleFollow();
+  else if(t.id==='chan-msg')channelMessage();
+  else if(t.dataset.chan!==undefined){if(!e.target.closest('[data-like],[data-comment],[data-share]'))openChannelByHandle(t.dataset.chan)}
   else if(t.dataset.user!==undefined)openConvoByUser(t.dataset.user,t.dataset.handle);
   else if(t.dataset.join!==undefined){
     if(!me){toast('sign in to join');return}
