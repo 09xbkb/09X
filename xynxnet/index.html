@@ -478,7 +478,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
           <div class="convo-head">
             <button class="back" id="convo-back">←</button>
             <div class="pfp" id="convo-pfp">·</div>
-            <div><b id="convo-name"></b><span id="convo-status"></span></div>
+            <div id="convo-idblock" style="cursor:pointer"><b id="convo-name"></b><span id="convo-status"></span></div>
           </div>
           <div class="msgs" id="msgs"></div>
           <div class="msg-input">
@@ -1189,7 +1189,9 @@ function openConvoByUser(uid,handle){
   openChatUser={id:uid,handle:handle};peopleMode=false;
   $('#convo-name').textContent=handle.replace(/^@/,'');
   $('#convo-status').textContent=handle;
-  $('#convo-pfp').outerHTML=miniPfp(handle).replace('class="pfp','id="convo-pfp" class="pfp');
+  $('#convo-idblock').dataset.chan=handle;
+  $('#convo-pfp').outerHTML=miniPfp(handle).replace('class="pfp','id="convo-pfp" data-chan="'+esc(handle)+'" class="pfp');
+  $('#convo-pfp').style.cursor='pointer';
   $('#chat-list').style.display='none';$('#s-chat .chat-head').style.display='none';$('#convo').style.display='flex';
   loadMsgs();
   clearInterval(chatPoll);chatPoll=setInterval(loadMsgs,4000);
@@ -1681,7 +1683,7 @@ function openQR(){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
   if(!t)return;
   if(t.id==='logo-btn'){var lm=$('#logo-menu');if(lm.classList.contains('on'))lm.classList.remove('on');else openMenu();return}
   if(t.dataset.menu!==undefined){menuGo(t.dataset.menu);return}
@@ -1795,4 +1797,4 @@ sb.auth.getSession().then(function(r){if(r.data&&r.data.session)enterApp(r.data.
 })();
 </script>
 </body>
-  </html>
+</html>
