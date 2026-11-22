@@ -2295,7 +2295,9 @@ document.addEventListener('keydown',function(e){
 $('#pic-input').addEventListener('change',function(){if(this.files[0])$('#vid-input').value='';$('#pic-name').textContent=this.files[0]?this.files[0].name:''});
 $('#vid-input').addEventListener('change',function(){if(this.files[0])$('#pic-input').value='';$('#pic-name').textContent=this.files[0]?this.files[0].name:''});
 $('#avatar-input').addEventListener('change',function(){$('#avatar-name').textContent=this.files[0]?this.files[0].name:''});
-$('#banner-input').addEventListener('change',function(){$('#banner-name').textContent=this.files[0]?this.files[0].name:''});document.querySelectorAll('.modal').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('on')})});
+$('#banner-input').addEventListener('change',function(){$('#banner-name').textContent=this.files[0]?this.files[0].name:''});
+$('#song-input').addEventListener('change',function(){if(this.files[0])uploadSong(this.files[0]);this.value=''});
+document.querySelectorAll('.modal').forEach(function(m){m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('on')})});
 $('#logo-menu').addEventListener('click',function(e){if(e.target===this)this.classList.remove('on')});
 
 applyStoredTheme();renderFeed();renderShorts();buildNav();renderSwatches();go('feed');
@@ -2307,4 +2309,4 @@ sb.auth.getSession().then(function(r){if(r.data&&r.data.session)enterApp(r.data.
 })();
 </script>
 </body>
-  </html>
+                                               </html>
