@@ -1317,7 +1317,7 @@ document.addEventListener('click',function(e){
   else if(t.id==='new-chat-btn')openPeople();
   else if(t.id==='new-comm-btn'){if(!me){toast('sign in first');return}$('#new-comm').classList.add('on')}
   else if(t.id==='notif-btn')openNotifs();
-  else if(t.id==='search-btn')go('search');
+  else if(t.id==='search-btn'){go('search');loadComms()}
   else if(t.id==='msg-pic')$('#msg-pic-input').click();
   else if(t.dataset.reactadd!==undefined){var ro=$('#ropts-'+t.dataset.reactadd);if(ro)ro.style.display=ro.style.display==='none'?'flex':'none'}
   else if(t.dataset.react!==undefined){var rp=t.dataset.react.split(':');toggleReact(rp[0],rp.slice(1).join(':'))}
