@@ -374,6 +374,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 
   /* ============ V3: logo menu + xx numbers + dial ============ */
   .topbar .word{cursor:pointer;user-select:none;-webkit-user-select:none}
+  .topbar button.word{border:0;padding:0;font-family:'Space Grotesk',sans-serif}
+  #s-dial .chat-head{justify-content:flex-start;gap:10px}
   .menu-pop{
     position:fixed;inset:0;z-index:55;display:none;
     background:rgba(3,3,8,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
@@ -438,7 +440,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 <!-- ================= APP ================= -->
 <div id="app">
   <header class="topbar">
-    <span class="word" id="logo-btn" title="menu">XYNXNET<span style="font-size:.5em;opacity:.75;letter-spacing:0"> ▾</span></span>
+    <button class="word" id="logo-btn" title="menu">XYNXNET<span style="font-size:.5em;opacity:.75;letter-spacing:0"> ▾</span></button>
     <div class="actions">
       <button class="icon-btn" id="search-btn" title="search">🔍</button>
       <button class="icon-btn" id="notif-btn" title="notifications">🔔</button>
@@ -1793,4 +1795,4 @@ sb.auth.getSession().then(function(r){if(r.data&&r.data.session)enterApp(r.data.
 })();
 </script>
 </body>
-</html>
+  </html>
