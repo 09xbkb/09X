@@ -395,6 +395,12 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   .menu-num b{font-family:'Space Grotesk',sans-serif;font-size:1.12rem;letter-spacing:.1em;background:linear-gradient(115deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
   .menu-item{display:flex;align-items:center;gap:12px;width:100%;padding:12px 10px;border-radius:12px;font-size:.92rem;text-align:left;color:var(--ink)}
   .menu-item:hover{background:rgba(255,255,255,.05)}
+  .lp-item{display:flex;align-items:center;gap:12px;width:100%;padding:13px 10px;border-radius:12px;font-size:.95rem;text-align:left;color:var(--ink)}
+  .lp-item:hover{background:rgba(255,255,255,.05)}
+  .lp-item.danger{color:#f87171}
+  .post{-webkit-touch-callout:none}
+  #ptr{position:fixed;top:0;left:0;right:0;z-index:80;display:flex;justify-content:center;pointer-events:none;transform:translateY(-48px);transition:transform .18s}
+  #ptr span{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:.72rem;color:var(--dim);margin-top:10px}
   .menu-item .mi{width:22px;text-align:center}
   .menu-item .tag{margin-left:auto;font-size:.62rem;color:var(--accent2);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
   .dial-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:12px 14px}
@@ -748,6 +754,20 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     </div>
   </div>
 </div>
+
+<!-- long-press post sheet -->
+<div class="modal" id="lp-sheet">
+  <div class="sheet">
+    <button class="close" data-close>✕</button>
+    <h3>post options</h3>
+    <button class="lp-item" data-lp="react">🔥 react</button>
+    <button class="lp-item" data-lp="repost">🔁 repost</button>
+    <button class="lp-item" data-lp="save">🏷️ save</button>
+    <button class="lp-item danger" data-lp="report">🚫 report</button>
+  </div>
+</div>
+
+<div id="ptr"><span>↓ pull to refresh</span></div>
 
 <!-- logo menu -->
 <div class="menu-pop" id="logo-menu">
@@ -1452,6 +1472,7 @@ function buildNav(){
   $('#rail').innerHTML=tabs.map(function(t){return '<button data-tab="'+t[0]+'"><span class="ico">'+navIcons[t[0]]+'</span>'+t[1]+'</button>'}).join('')+'<button class="btn" id="rail-post">+ post</button>';
 }
 function go(tab){
+  curTab=tab;
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('on')});
   $('#s-'+tab).classList.add('on');
   document.querySelectorAll('[data-tab]').forEach(function(b){b.classList.toggle('on',b.dataset.tab===tab)});
@@ -1524,6 +1545,66 @@ function setPack(name){
 function applyStoredTheme(){
   var pk=localStorage.getItem('xy-pack');if(pk&&themePacks[pk])setPack(pk);
   var ac=localStorage.getItem('xy-accent');if(ac!==null&&themes[+ac])setTheme(+ac);
+}
+
+/* ---------- v3 batch 3: native gestures ---------- */
+var curTab='feed',lpTarget=null;
+function haptic(){try{if(navigator.vibrate)navigator.vibrate(8)}catch(_){}}
+function openLp(pid){lpTarget=pid;$('#lp-sheet').classList.add('on');haptic()}
+function lpAct(kind){
+  var pid=lpTarget;$('#lp-sheet').classList.remove('on');
+  if(!pid)return;
+  if(kind==='report'){var p=posts.find(function(x){return String(x.id)===String(pid)});if(p)openReport(p.author,p.handle);return}
+  var sel=kind==='react'?'[data-reactadd="'+pid+'"]':kind==='repost'?'[data-repost="'+pid+'"]':'[data-bookmark="'+pid+'"]';
+  var b=document.querySelector(sel);if(b)b.click();
+}
+var lpTimer=null,lpStart=null;
+document.addEventListener('touchstart',function(e){
+  var art=e.target.closest?e.target.closest('article.post'):null;
+  if(!art||e.target.closest('button,a,input,textarea,video,select'))return;
+  lpStart={x:e.touches[0].clientX,y:e.touches[0].clientY,pid:art.dataset.pid};
+  lpTimer=setTimeout(function(){if(lpStart)openLp(lpStart.pid)},500);
+},{passive:true});
+document.addEventListener('touchmove',function(e){
+  if(!lpStart)return;
+  var dx=e.touches[0].clientX-lpStart.x,dy=e.touches[0].clientY-lpStart.y;
+  if(Math.abs(dx)>10||Math.abs(dy)>10){clearTimeout(lpTimer);lpStart=null}
+},{passive:true});
+document.addEventListener('touchend',function(){clearTimeout(lpTimer);lpStart=null},{passive:true});
+document.addEventListener('contextmenu',function(e){if(e.target.closest&&e.target.closest('article.post'))e.preventDefault()});
+/* edge swipe back */
+var edgeT=null;
+document.addEventListener('touchstart',function(e){var t=e.touches[0];if(t.clientX<=28)edgeT={x:t.clientX,y:t.clientY}},{passive:true});
+document.addEventListener('touchend',function(e){
+  if(!edgeT)return;var t=e.changedTouches[0];var dx=t.clientX-edgeT.x,dy=t.clientY-edgeT.y;edgeT=null;
+  if(dx>72&&Math.abs(dy)<60)goBack();
+},{passive:true});
+function goBack(){
+  haptic();
+  var m=document.querySelector('.modal.on');if(m){m.classList.remove('on');return}
+  var mp=document.querySelector('.menu-pop.on');if(mp){mp.classList.remove('on');return}
+  var cv=$('#convo');if(curTab==='chat'&&cv&&getComputedStyle(cv).display!=='none'){$('#convo-back').click();return}
+  var cm=$('#comm-view');if(curTab==='comm'&&cm&&getComputedStyle(cm).display!=='none'){$('#comm-back').click();return}
+  if(curTab&&curTab!=='feed')go('feed');
+}
+/* pull to refresh */
+var ptrT=null;
+document.addEventListener('touchstart',function(e){if(window.scrollY<=0)ptrT={y:e.touches[0].clientY,pull:0}},{passive:true});
+document.addEventListener('touchmove',function(e){
+  if(!ptrT)return;
+  if(window.scrollY>0){ptrT=null;hidePtr();return}
+  var dy=e.touches[0].clientY-ptrT.y;
+  if(dy>0){ptrT.pull=dy;var p=$('#ptr');if(dy>30){p.style.transform='translateY(0)';p.querySelector('span').textContent=dy>80?'↻ release to refresh':'↓ pull to refresh'}}
+},{passive:true});
+document.addEventListener('touchend',function(){if(!ptrT)return;var pull=ptrT.pull;ptrT=null;hidePtr();if(pull>80)refreshCurrent()},{passive:true});
+function hidePtr(){var p=$('#ptr');if(p)p.style.transform='translateY(-48px)'}
+function refreshCurrent(){
+  haptic();
+  if(curTab==='chat')loadConvos();
+  else if(curTab==='comm')loadComms();
+  else if(curTab==='shorts'){loadFeed();loadComments(function(){renderFeed();renderShorts()})}
+  else{loadFeed();loadComments(function(){renderFeed()});loadProfiles(function(){paintMyProfile();renderFeed()});loadFollows();loadReactions(function(){renderFeed()});loadBookmarks(function(){renderFeed()});loadNotifs()}
+  toast('refreshed');
 }
 
 /* ---------- v3 batch 2: push notifications + badge ---------- */
@@ -1772,7 +1853,7 @@ function openQR(){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#push-enable,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#push-enable,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-lp],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
   if(!t)return;
   if(t.id==='logo-btn'){var lm=$('#logo-menu');if(lm.classList.contains('on'))lm.classList.remove('on');else openMenu();return}
   if(t.dataset.menu!==undefined){menuGo(t.dataset.menu);return}
@@ -1840,6 +1921,7 @@ document.addEventListener('click',function(e){
   else if(t.id==='msg-pic')$('#msg-pic-input').click();
   else if(t.id==='push-enable')enablePush();
   else if(t.dataset.reactadd!==undefined){var ro=$('#ropts-'+t.dataset.reactadd);if(ro)ro.style.display=ro.style.display==='none'?'flex':'none'}
+  else if(t.dataset.lp!==undefined)lpAct(t.dataset.lp);
   else if(t.dataset.react!==undefined){var rp=t.dataset.react.split(':');toggleReact(rp[0],rp.slice(1).join(':'))}
   else if(t.dataset.repost!==undefined)toggleRepost(t.dataset.repost);
   else if(t.dataset.bookmark!==undefined)toggleBookmark(t.dataset.bookmark);
@@ -1887,4 +1969,4 @@ sb.auth.getSession().then(function(r){if(r.data&&r.data.session)enterApp(r.data.
 })();
 </script>
 </body>
-</html>
+  </html>
