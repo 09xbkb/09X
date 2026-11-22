@@ -19,16 +19,23 @@ self.addEventListener('push',function(e){
     badge:'https://yklwqghinvyhylsdrihp.supabase.co/storage/v1/object/public/media/1001/icon-192.png',
     tag:d.tag||('xy-'+(d.kind||'note')),
     renotify:!!d.renotify,
+    actions:d.actions||[],
+    requireInteraction:!!d.requireInteraction,
     data:{url:d.url||'./'}
   };
   e.waitUntil(self.registration.showNotification(title,opts));
 });
 self.addEventListener('notificationclick',function(e){
   e.notification.close();
+  var act=e.action||'';
   var target=(e.notification.data&&e.notification.data.url)||'./';
+  if(act==='decline')target='./?call=1&decline=1';else if(act==='accept')target='./?call=1&accept=1';
   e.waitUntil(clients.matchAll({type:'window',includeUncontrolled:true}).then(function(list){
     for(var i=0;i<list.length;i++){
-      if(list[i].url.indexOf('xynxnet')>-1&&'focus' in list[i]){list[i].navigate(target);return list[i].focus()}
+      if(list[i].url.indexOf('xynxnet')>-1&&'focus' in list[i]){
+        if(act){list[i].postMessage({type:'call-action',action:act});return list[i].focus()}
+        list[i].navigate(target);return list[i].focus();
+      }
     }
     return clients.openWindow(target);
   }));
