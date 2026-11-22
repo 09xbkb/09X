@@ -448,7 +448,6 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     <div class="actions">
       <button class="icon-btn" id="search-btn" title="search">🔍</button>
       <button class="icon-btn" id="notif-btn" title="notifications">🔔</button>
-      <button class="icon-btn" id="theme-btn" title="themes">🎨</button>
     </div>
   </header>
 
@@ -524,7 +523,6 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
             <div class="pfp lg" id="prof-pfp" style="--a1:#8b5cf6;--a2:#22d3ee;--a3:#e879f9">·</div>
             <div class="edit-row">
               <button class="edit-btn" id="edit-profile-btn">edit profile</button>
-              <button class="edit-btn" id="prof-theme-btn">themes</button>
             </div>
           </div>
           <h2 id="prof-name">you</h2>
@@ -721,6 +719,32 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     <div class="theme-row" style="border:none">
       <div>session<small>you stay signed in on this device</small></div>
       <button class="edit-btn" id="signout-btn">sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- notification prefs -->
+<div class="modal" id="notif-prefs">
+  <div class="sheet">
+    <button class="close" data-close>✕</button>
+    <h3>notifications</h3>
+    <div class="theme-row">
+      <div>push alerts<small>lock-screen alerts on this device</small></div>
+      <button class="edit-btn" id="push-enable">enable</button>
+    </div>
+    <div class="theme-row"><div>messages<small>new DMs</small></div><button class="toggle on" id="np-dms"></button></div>
+    <div class="theme-row"><div>reactions<small>likes, reacts, reposts, comments</small></div><button class="toggle on" id="np-reactions"></button></div>
+    <div class="theme-row"><div>follows<small>new followers</small></div><button class="toggle on" id="np-follows"></button></div>
+    <div class="theme-row"><div>mentions<small>when someone tags you</small></div><button class="toggle on" id="np-mentions"></button></div>
+    <div class="theme-row"><div>orbits<small>close friends go live</small></div><button class="toggle on" id="np-orbits"></button></div>
+    <div class="theme-row" style="border:none"><div>calls<small>incoming calls</small></div><button class="toggle on" id="np-calls"></button></div>
+    <div class="theme-row" style="border:none">
+      <div>quiet hours<small>no push between these hours</small></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="np-qstart" style="background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:.8rem"></select>
+        <span style="color:var(--faint);font-size:.75rem">to</span>
+        <select id="np-qend" style="background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font-size:.8rem"></select>
+      </div>
     </div>
   </div>
 </div>
@@ -1057,6 +1081,7 @@ function loadNotifs(cb){
 function paintBell(){
   var b=$('#notif-btn');if(!b)return;
   b.innerHTML='🔔'+(unreadNotifs?'<span class="ndot">'+unreadNotifs+'</span>':'');
+  syncAppBadge();
 }
 function notify(recipientId,kind,postId,text){
   if(!me||!recipientId||recipientId===me.id)return;
@@ -1244,6 +1269,7 @@ function sendMsg(){
   var finish=function(url){
     sb.from('messages').insert({sender:senderId,sender_handle:senderHandle,recipient:recipId,recipient_handle:recipHandle,text:v,media_url:url}).then(function(r){
       if(r.error){toast('message failed: '+r.error.message);return}
+      notify(recipId,'dm',null,v?('sent you a message'):'sent you a photo');
       /* keep the completion UI tied to the conversation this was sent to */
       if(openChatUser&&openChatUser.id===recipId)loadMsgs();
       else toast('sent to '+recipHandle.replace(/^@/,''));
@@ -1500,13 +1526,71 @@ function applyStoredTheme(){
   var ac=localStorage.getItem('xy-accent');if(ac!==null&&themes[+ac])setTheme(+ac);
 }
 
+/* ---------- v3 batch 2: push notifications + badge ---------- */
+var VAPID_PUBLIC='BI-douZZLQQf1qXX8L63NopKVVcstwLXUKCZZ6iFRnrYI4UpPWnuutEhxz99ra0XmxG7sQ4XHEqiy7o9cEcIvmc';
+var notifPrefs={dms:true,reactions:true,follows:true,mentions:true,orbits:true,calls:true,quiet_start:null,quiet_end:null};
+function urlB64ToUint8Array(b){var pad='='.repeat((4-b.length%4)%4);var raw=atob((b+pad).replace(/-/g,'+').replace(/_/g,'/'));var out=new Uint8Array(raw.length);for(var i=0;i<raw.length;i++)out[i]=raw.charCodeAt(i);return out}
+function fillQuietSelects(){
+  var opts='<option value="">off</option>';for(var h=0;h<24;h++)opts+='<option value="'+h+'">'+String(h).padStart(2,'0')+':00</option>';
+  $('#np-qstart').innerHTML=opts;$('#np-qend').innerHTML=opts;
+}
+function openNotifPrefs(){
+  if(!me){toast('sign in first');return}
+  fillQuietSelects();
+  sb.from('notification_prefs').select('*').eq('user_id',me.id).maybeSingle().then(function(r){
+    if(r.data)notifPrefs=r.data;
+    ['dms','reactions','follows','mentions','orbits','calls'].forEach(function(k){var el=$('#np-'+k);if(el)el.classList.toggle('on',!!notifPrefs[k])});
+    $('#np-qstart').value=notifPrefs.quiet_start===null||notifPrefs.quiet_start===undefined?'':String(notifPrefs.quiet_start);
+    $('#np-qend').value=notifPrefs.quiet_end===null||notifPrefs.quiet_end===undefined?'':String(notifPrefs.quiet_end);
+  });
+  paintPushBtn();
+  $('#notif-prefs').classList.add('on');
+}
+function paintPushBtn(){
+  var b=$('#push-enable');if(!b)return;
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){b.textContent='install app for push';return}
+  if(typeof Notification!=='undefined'&&Notification.permission==='granted')b.textContent='on ✓';
+  else if(typeof Notification!=='undefined'&&Notification.permission==='denied')b.textContent='blocked in browser';
+  else b.textContent='enable';
+}
+function saveNotifPrefs(){
+  if(!me)return;
+  var row={user_id:me.id,dms:notifPrefs.dms,reactions:notifPrefs.reactions,follows:notifPrefs.follows,mentions:notifPrefs.mentions,orbits:notifPrefs.orbits,calls:notifPrefs.calls,quiet_start:notifPrefs.quiet_start,quiet_end:notifPrefs.quiet_end,tz_offset:new Date().getTimezoneOffset(),updated_at:new Date().toISOString()};
+  sb.from('notification_prefs').upsert(row).then(function(){});
+}
+async function enablePush(){
+  if(!me){toast('sign in first');return}
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)){toast('push needs the installed app');return}
+  try{
+    var perm=await Notification.requestPermission();
+    if(perm!=='granted'){paintPushBtn();toast('notifications not allowed');return}
+    var reg=await navigator.serviceWorker.ready;
+    var sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:urlB64ToUint8Array(VAPID_PUBLIC)});
+    var j=sub.toJSON();
+    var r=await sb.from('push_subscriptions').upsert({user_id:me.id,endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth},{onConflict:'endpoint'});
+    if(r.error){toast('push save failed');return}
+    paintPushBtn();toast('push alerts on');
+  }catch(err){toast('push failed here')}
+}
+document.addEventListener('change',function(e){
+  if(e.target.id==='np-qstart'){notifPrefs.quiet_start=e.target.value===''?null:+e.target.value;saveNotifPrefs()}
+  if(e.target.id==='np-qend'){notifPrefs.quiet_end=e.target.value===''?null:+e.target.value;saveNotifPrefs()}
+});
+function syncAppBadge(){
+  if(!('setAppBadge' in navigator))return;
+  if(unreadNotifs>0)navigator.setAppBadge(unreadNotifs).catch(function(){});
+  else if('clearAppBadge' in navigator)navigator.clearAppBadge().catch(function(){});
+}
+
 /* ---------- v3: xx numbers, logo menu, block/report ---------- */
 var myXX=null,iBlocked={},blockedMe={};
-var menuShipped={dial:true,saved:true,settings:true};
+var menuShipped={dial:true,saved:true,settings:true,notifs:true};
 var menuDef=[
   ['constellation','✦','Constellation'],
   ['dial','☎️','Phone Dial'],
   ['saved','🚀','Saved'],
+  ['notifs','🔔','Notifications'],
   ['invites','🎟','Invite Codes'],
   ['night','🌙','Night Mode'],
   ['settings','⚙️','Settings']
@@ -1542,6 +1626,7 @@ function menuGo(k){
   $('#logo-menu').classList.remove('on');
   if(k==='dial')openDial();
   else if(k==='saved'){go('prof');setTimeout(function(){var el=document.querySelector('.saved-h');if(el)el.scrollIntoView({behavior:'smooth'})},150)}
+  else if(k==='notifs')openNotifPrefs();
   else if(k==='settings')$('#themes').classList.add('on');
 }
 function loadBlocks(cb){
@@ -1687,7 +1772,7 @@ function openQR(){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#push-enable,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
   if(!t)return;
   if(t.id==='logo-btn'){var lm=$('#logo-menu');if(lm.classList.contains('on'))lm.classList.remove('on');else openMenu();return}
   if(t.dataset.menu!==undefined){menuGo(t.dataset.menu);return}
@@ -1729,7 +1814,6 @@ document.addEventListener('click',function(e){
   else if(t.id==='vid-btn')$('#vid-input').click();
   else if(t.id==='signout-btn')sb.auth.signOut().then(function(){location.reload()});
   else if(t.id==='composer-teaser'||t.id==='rail-post')$('#composer').classList.add('on');
-  else if(t.id==='theme-btn'||t.id==='prof-theme-btn')$('#themes').classList.add('on');
   else if(t.id==='post-btn')doPost();
   else if(t.id==='msg-send')sendMsg();
   else if(t.id==='comment-send')sendComment();
@@ -1754,6 +1838,7 @@ document.addEventListener('click',function(e){
   else if(t.id==='notif-btn')openNotifs();
   else if(t.id==='search-btn'){go('search');loadComms()}
   else if(t.id==='msg-pic')$('#msg-pic-input').click();
+  else if(t.id==='push-enable')enablePush();
   else if(t.dataset.reactadd!==undefined){var ro=$('#ropts-'+t.dataset.reactadd);if(ro)ro.style.display=ro.style.display==='none'?'flex':'none'}
   else if(t.dataset.react!==undefined){var rp=t.dataset.react.split(':');toggleReact(rp[0],rp.slice(1).join(':'))}
   else if(t.dataset.repost!==undefined)toggleRepost(t.dataset.repost);
@@ -1770,6 +1855,7 @@ document.addEventListener('click',function(e){
     if(t.id==='tgl-pfp')document.body.classList.toggle('anim-pfps',t.classList.contains('on'));
     if(t.id==='tgl-dim'){var d=t.classList.contains('on');document.documentElement.style.setProperty('--bg',d?'#020205':'#05050a');document.documentElement.style.setProperty('--bg2',d?'#06060c':'#0a0a14');document.documentElement.style.setProperty('--card',d?'#0a0a12':'#0e0e1a')}
     if(t.id==='tgl-numsearch')toggleNumSearch();
+    if(t.id.indexOf('np-')===0){var pk=t.id.slice(3);notifPrefs[pk]=t.classList.contains('on');saveNotifPrefs()}
   }
   else if(t.dataset.close!==undefined)t.closest('.modal').classList.remove('on');
   else if(t.closest('.comm')&&t.closest('.comm').dataset.comm)openCommById(t.closest('.comm').dataset.comm);
