@@ -267,6 +267,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   /* ============ PROFILE ============ */
   .prof-banner{height:170px;position:relative;overflow:hidden}
   .prof-banner .slide{position:absolute;inset:-40%;background:conic-gradient(from 0deg,#3b1a78,#0e3a5c,#5c1248,#3b1a78);animation:slowspin 18s linear infinite}
+  .prof-banner[style*="background-image"] .slide{display:none}
   @keyframes slowspin{to{transform:rotate(360deg)}}
   .prof-banner::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 30%,var(--bg))}
   .prof-head{padding:0 16px;margin-top:-44px;position:relative;z-index:2}
