@@ -239,6 +239,19 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   .msg.them{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:6px}
   .msg.me{align-self:flex-end;background:linear-gradient(115deg,var(--accent),var(--accent2));color:#05050a;font-weight:500;border-bottom-right-radius:6px}
   .msg-input{display:flex;gap:8px;padding:10px 14px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line)}
+  .convo-chips{margin-left:auto;display:flex;gap:6px}
+  .chip{font-size:.72rem;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--dim)}
+  .chip.on{border-color:var(--accent);color:var(--accent2)}
+  .onlinedot{position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#34d399;border:2px solid var(--bg);z-index:2}
+  .msg .seen{display:block;font-size:.62rem;opacity:.75;text-align:right;margin-top:3px}
+  .voice{display:flex;align-items:center;gap:8px;min-width:170px}
+  .vplay{width:32px;height:32px;border-radius:50%;background:linear-gradient(115deg,#f59e0b,#e879f9);color:#0a0a14;font-size:.78rem;flex:none}
+  .vbars{display:flex;align-items:center;gap:2px;height:22px}
+  .vbars i{width:3px;background:currentColor;border-radius:2px;display:block;opacity:.75}
+  .vdur{font-size:.68rem;opacity:.75}
+  #msg-mic.recording{background:#ef4444 !important;animation:pulserec 1s infinite}
+  @keyframes pulserec{50%{opacity:.5}}
+  .dm-notice{margin:6px auto 12px;font-size:.7rem;color:var(--faint);border:1px dashed var(--line);border-radius:12px;padding:8px 14px;text-align:center;width:fit-content;max-width:88%}
   .msg-input input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:11px 16px;font-size:.9rem;outline:none}
   .msg-input input:focus{border-color:var(--accent)}
   .msg-input .send{width:44px;height:44px;border-radius:50%;background:linear-gradient(115deg,var(--accent),var(--accent2));color:#05050a;font-weight:700;flex:none}
@@ -488,9 +501,14 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
             <button class="back" id="convo-back">←</button>
             <div class="pfp" id="convo-pfp">·</div>
             <div id="convo-idblock" style="cursor:pointer"><b id="convo-name"></b><span id="convo-status"></span></div>
+            <div class="convo-chips">
+              <button class="chip" id="receipts-chip" title="read receipts">👁</button>
+              <button class="chip" id="timer-chip" title="disappearing messages">⏳ off</button>
+            </div>
           </div>
           <div class="msgs" id="msgs"></div>
           <div class="msg-input">
+            <button class="send" id="msg-mic" style="background:rgba(255,255,255,.08)">🎙</button>
             <button class="send" id="msg-pic" style="background:rgba(255,255,255,.08)">📷</button>
             <input type="file" id="msg-pic-input" accept="image/*" hidden>
             <input id="msg-text" type="text" enterkeyhint="send" placeholder="message…" autocomplete="off">
@@ -1242,20 +1260,160 @@ function openConvoByUser(uid,handle){
   $('#convo-pfp').outerHTML=miniPfp(handle).replace('class="pfp','id="convo-pfp" data-chan="'+esc(handle)+'" class="pfp');
   $('#convo-pfp').style.cursor='pointer';
   $('#chat-list').style.display='none';$('#s-chat .chat-head').style.display='none';$('#convo').style.display='flex';
+  var pf=$('#convo-pfp');if(pf)pf.insertAdjacentHTML('beforeend','<span class="onlinedot" id="convo-dot" style="display:none"></span>');
+  peerXX=null;
+  sb.from('profiles').select('xx_number').eq('id',uid).maybeSingle().then(function(r){if(r.data&&r.data.xx_number){peerXX=r.data.xx_number;paintConvoStatus()}});
+  loadDmSettings();
+  dmSubscribe();
   loadMsgs();
   clearInterval(chatPoll);chatPoll=setInterval(loadMsgs,4000);
 }
 function loadMsgs(){
   if(!openChatUser||!me)return;
-  sb.from('messages').select('*').or('and(sender.eq.'+me.id+',recipient.eq.'+openChatUser.id+'),and(sender.eq.'+openChatUser.id+',recipient.eq.'+me.id+')').order('created_at',{ascending:true}).limit(200).then(function(r){
+  var pairOr='and(sender.eq.'+me.id+',recipient.eq.'+openChatUser.id+'),and(sender.eq.'+openChatUser.id+',recipient.eq.'+me.id+')';
+  sb.from('messages').select('*').or(pairOr).order('created_at',{ascending:true}).limit(200).then(function(r){
+    var now=Date.now();
+    var rows=(r.data||[]).filter(function(m){return !m.expires_at||new Date(m.expires_at).getTime()>now});
+    if(rows.length!==(r.data||[]).length){
+      /* purge expired rows for this pair, fire and forget */
+      sb.from('messages').delete().or(pairOr).not('expires_at','is',null).lt('expires_at',new Date(now).toISOString()).then(function(){});
+    }
+    /* mark incoming as seen; disappearing clock starts at seen */
+    var unread=rows.filter(function(m){return m.sender===openChatUser.id&&!m.read_at});
+    if(unread.length){
+      var patch={read_at:new Date(now).toISOString()};
+      if(dmSet.disappear_secs>0)patch.expires_at=new Date(now+dmSet.disappear_secs*1000).toISOString();
+      sb.from('messages').update(patch).in('id',unread.map(function(m){return m.id})).then(function(){});
+    }
     var atBottom=$('#msgs').scrollTop+$('#msgs').clientHeight>=$('#msgs').scrollHeight-60;
-    $('#msgs').innerHTML=(r.data||[]).map(function(m){
-      return '<div class="msg '+(m.sender===me.id?'me':'them')+'">'+(m.media_url?dmImgTag(m.media_url):'')+esc(m.text||'')+'</div>';
-    }).join('')||'<div style="color:var(--faint);text-align:center;margin-top:20px">say the first thing.</div>';
+    var notice=dmSet.disappear_secs>0?'<div class="dm-notice">⏳ messages in this chat disappear '+(dmSet.disappear_secs===3600?'1h':'24h')+' after being seen</div>':'';
+    $('#msgs').innerHTML=notice+(rows.length?rows.map(function(m){
+      var inner=m.kind==='voice'?voiceTag(m):(m.media_url?dmImgTag(m.media_url):'')+esc(m.text||'');
+      var seen=(m.sender===me.id&&m.read_at&&dmSet.receipts_on)?'<span class="seen">seen · '+ago(m.read_at)+'</span>':'';
+      return '<div class="msg '+(m.sender===me.id?'me':'them')+'">'+inner+seen+'</div>';
+    }).join(''):'<div style="color:var(--faint);text-align:center;margin-top:20px">say the first thing.</div>');
     dmResolveImgs();
     if(atBottom)$('#msgs').scrollTop=$('#msgs').scrollHeight;
   });
 }
+/* ---------- v3 batch 4: DM upgrades ---------- */
+var peerXX=null,dmSet={receipts_on:false,disappear_secs:0},dmSetKey=null;
+var dmChan=null,peerOnline=false,peerTyping=false,typingHideT=null,lastTypingSent=0;
+function pairKey(a,b){return [a,b].sort().join(':')}
+function fmtDur(s){s=Math.max(0,Math.round(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function dmSubscribe(){
+  dmUnsub();
+  if(!me||!openChatUser||!sb.channel)return;
+  var ch=sb.channel('dm-'+pairKey(me.id,openChatUser.id),{config:{presence:{key:me.id}}});
+  ch.on('presence',{event:'sync'},function(){var st=ch.presenceState();peerOnline=!!st[openChatUser.id];paintConvoStatus()});
+  ch.on('broadcast',{event:'typing'},function(){peerTyping=true;paintConvoStatus();clearTimeout(typingHideT);typingHideT=setTimeout(function(){peerTyping=false;paintConvoStatus()},3000)});
+  ch.subscribe(function(s){if(s==='SUBSCRIBED')ch.track({})});
+  dmChan=ch;
+}
+function dmUnsub(){if(dmChan){try{sb.removeChannel(dmChan)}catch(_){ }dmChan=null}peerOnline=false;peerTyping=false}
+function paintConvoStatus(){
+  var el=$('#convo-status');if(!el||!openChatUser)return;
+  if(peerTyping){el.textContent='typing…';return}
+  el.textContent=peerOnline?'online':(peerXX||openChatUser.handle);
+  var d=$('#convo-dot');if(d)d.style.display=peerOnline?'block':'none';
+}
+function noteTyping(){
+  if(!dmChan||Date.now()-lastTypingSent<2000)return;lastTypingSent=Date.now();
+  dmChan.send({type:'broadcast',event:'typing',payload:{}});
+}
+function loadDmSettings(){
+  dmSet={receipts_on:false,disappear_secs:0};paintDmChips();
+  if(!me||!openChatUser)return;
+  var ids=[me.id,openChatUser.id].sort();dmSetKey={a:ids[0],b:ids[1]};
+  sb.from('dm_settings').select('*').eq('user_a',dmSetKey.a).eq('user_b',dmSetKey.b).maybeSingle().then(function(r){
+    if(r.data)dmSet={receipts_on:r.data.receipts_on,disappear_secs:r.data.disappear_secs};
+    paintDmChips();loadMsgs();
+  });
+}
+function saveDmSettings(){
+  if(!dmSetKey)return;
+  sb.from('dm_settings').upsert({user_a:dmSetKey.a,user_b:dmSetKey.b,receipts_on:dmSet.receipts_on,disappear_secs:dmSet.disappear_secs,updated_at:new Date().toISOString()}).then(function(){});
+}
+function paintDmChips(){
+  var t=$('#timer-chip');if(t)t.textContent='⏳ '+(dmSet.disappear_secs===3600?'1h':dmSet.disappear_secs===86400?'24h':'off');
+  var r=$('#receipts-chip');if(r)r.classList.toggle('on',!!dmSet.receipts_on);
+}
+function cycleTimer(){
+  dmSet.disappear_secs=dmSet.disappear_secs===0?3600:dmSet.disappear_secs===3600?86400:0;
+  paintDmChips();saveDmSettings();loadMsgs();
+  toast(dmSet.disappear_secs?'messages disappear '+(dmSet.disappear_secs===3600?'1h':'24h')+' after being seen':'disappearing off');
+}
+function toggleReceipts(){
+  dmSet.receipts_on=!dmSet.receipts_on;paintDmChips();saveDmSettings();loadMsgs();
+  toast(dmSet.receipts_on?'read receipts on':'read receipts off');
+}
+/* voice notes */
+var mediaRec=null,recChunks=[],recStart=0,curAudio=null,curPlayBtn=null;
+async function startRec(){
+  if(mediaRec)return;
+  if(!navigator.mediaDevices||!window.MediaRecorder){toast('voice notes need mic access');return}
+  try{
+    var stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    recChunks=[];recStart=Date.now();
+    var mr=new MediaRecorder(stream);
+    mr.ondataavailable=function(ev){if(ev.data&&ev.data.size)recChunks.push(ev.data)};
+    mr.onstop=function(){
+      stream.getTracks().forEach(function(tr){tr.stop()});
+      var blob=new Blob(recChunks,{type:mr.mimeType||'audio/webm'});
+      if(Date.now()-recStart<700){toast('hold to record');return}
+      sendVoice(blob);
+    };
+    mr.start();mediaRec=mr;
+    var mb=$('#msg-mic');if(mb)mb.classList.add('recording');
+  }catch(err){toast('mic blocked')}
+}
+function stopRec(){if(!mediaRec)return;var mr=mediaRec;mediaRec=null;var mb=$('#msg-mic');if(mb)mb.classList.remove('recording');mr.stop()}
+function computePeaks(blob){
+  return blob.arrayBuffer().then(function(ab){
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC)throw 0;
+    var ctx=new AC();
+    return ctx.decodeAudioData(ab).then(function(buf){
+      var data=buf.getChannelData(0),n=24,out=[],step=Math.floor(data.length/n)||1;
+      for(var i=0;i<n;i++){var sum=0;for(var j=0;j<step;j++)sum+=Math.abs(data[i*step+j]||0);out.push(3+Math.min(20,Math.round((sum/step)*90)))}
+      ctx.close();return out;
+    });
+  }).catch(function(){return [5,8,6,9,7,10,8,6,9,7,11,8,6,9,7,10,6,8,5,9,7,6,8,5]});
+}
+function sendVoice(blob){
+  if(!openChatUser||!me)return;
+  var senderId=me.id,recipId=openChatUser.id,recipHandle=openChatUser.handle;
+  var ext=(blob.type||'').indexOf('mp4')>-1?'m4a':(blob.type||'').indexOf('ogg')>-1?'ogg':'webm';
+  var path=senderId+'/'+recipId+'/vn-'+Date.now()+'.'+ext;
+  var dur=Math.round((Date.now()-recStart)/1000);
+  toast('sending voice note...');
+  computePeaks(blob).then(function(peaks){
+    sb.storage.from('dm-media').upload(path,blob).then(function(r){
+      if(r.error){toast('upload failed: '+r.error.message);return}
+      sb.from('messages').insert({sender:senderId,sender_handle:myHandle,recipient:recipId,recipient_handle:recipHandle,kind:'voice',text:JSON.stringify({dur:dur,peaks:peaks}),media_url:'dm-media:'+path}).then(function(rr){
+        if(rr.error){toast('voice failed: '+rr.error.message);return}
+        notify(recipId,'dm',null,'sent you a voice note');
+        loadMsgs();
+      });
+    });
+  });
+}
+function voiceTag(m){
+  var meta={};try{meta=JSON.parse(m.text||'{}')}catch(_){ }
+  var peaks=meta.peaks||[5,8,6,9,7,10,8,6,9,7,11,8,6,9,7,10,6,8,5,9,7,6,8,5];
+  var bars=peaks.map(function(p){return '<i style="height:'+Math.max(3,Math.round(p))+'px"></i>'}).join('');
+  return '<div class="voice" data-voice="'+esc(m.media_url||'')+'"><button class="vplay">▶</button><div class="vbars">'+bars+'</div><span class="vdur">'+fmtDur(meta.dur||0)+'</span></div>';
+}
+function playVoice(btn){
+  var wrap=btn.closest('.voice');if(!wrap)return;
+  var mu=wrap.dataset.voice;
+  if(curAudio&&curPlayBtn===btn){if(curAudio.paused){curAudio.play();btn.textContent='⏸'}else{curAudio.pause();btn.textContent='▶'}return}
+  if(curAudio){curAudio.pause();if(curPlayBtn)curPlayBtn.textContent='▶'}
+  var go=function(url){curAudio=new Audio(url);curPlayBtn=btn;btn.textContent='⏸';curAudio.onended=function(){btn.textContent='▶'};curAudio.play()};
+  if(mu.indexOf('dm-media:')===0){sb.storage.from('dm-media').createSignedUrl(mu.slice(9),3600).then(function(r){if(r.data)go(r.data.signedUrl)})}
+  else go(mu);
+}
+
 /* private DM photos: stored as 'dm-media:<sender>/<recipient>/file' in a private bucket, shown via short-lived signed URLs */
 var dmUrlCache={};
 function dmImgTag(mu){
@@ -1853,7 +2011,7 @@ function openQR(){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#push-enable,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-lp],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],.swatch[data-theme],.swatch[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#push-enable,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#timer-chip,#receipts-chip,.vplay,#msg-mic,#msg-pic,#forgot-link,#reset-btn,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-lp],[data-scomm],[data-chan],.comm,#logo-btn,#dial-back,#xx-choose,#xx-qr,#report-send,#chan-block,#chan-report,[data-menu],[data-digit],[data-cdigit],[data-nummsg],[data-numblock],[data-numreport]');
   if(!t)return;
   if(t.id==='logo-btn'){var lm=$('#logo-menu');if(lm.classList.contains('on'))lm.classList.remove('on');else openMenu();return}
   if(t.dataset.menu!==undefined){menuGo(t.dataset.menu);return}
@@ -1919,6 +2077,9 @@ document.addEventListener('click',function(e){
   else if(t.id==='notif-btn')openNotifs();
   else if(t.id==='search-btn'){go('search');loadComms()}
   else if(t.id==='msg-pic')$('#msg-pic-input').click();
+  else if(t.id==='timer-chip')cycleTimer();
+  else if(t.id==='receipts-chip')toggleReceipts();
+  else if(t.classList.contains('vplay'))playVoice(t);
   else if(t.id==='push-enable')enablePush();
   else if(t.dataset.reactadd!==undefined){var ro=$('#ropts-'+t.dataset.reactadd);if(ro)ro.style.display=ro.style.display==='none'?'flex':'none'}
   else if(t.dataset.lp!==undefined)lpAct(t.dataset.lp);
@@ -1929,7 +2090,7 @@ document.addEventListener('click',function(e){
   else if(t.id==='nc-type-open')setNcType('open');
   else if(t.id==='nc-type-broadcast')setNcType('broadcast');
   else if(t.id==='nc-create')createComm();
-  else if(t.id==='convo-back'){$('#convo').style.display='none';$('#chat-list').style.display='';$('#s-chat .chat-head').style.display='';openChatUser=null;clearInterval(chatPoll);loadConvos()}
+  else if(t.id==='convo-back'){dmUnsub();$('#convo').style.display='none';$('#chat-list').style.display='';$('#s-chat .chat-head').style.display='';openChatUser=null;clearInterval(chatPoll);loadConvos()}
   else if(t.id==='comm-back'){$('#comm-view').style.display='none';$('#comms').style.display='';$('#s-comm .chat-head').style.display='';openComm=null;loadComms()}
   else if(t.classList.contains('toggle')){
     t.classList.toggle('on');
@@ -1942,10 +2103,19 @@ document.addEventListener('click',function(e){
   else if(t.dataset.close!==undefined)t.closest('.modal').classList.remove('on');
   else if(t.closest('.comm')&&t.closest('.comm').dataset.comm)openCommById(t.closest('.comm').dataset.comm);
 });
-document.addEventListener('input',function(e){if(e.target&&e.target.id==='search-input')doSearch()});
+document.addEventListener('input',function(e){
+  if(!e.target)return;
+  if(e.target.id==='search-input')doSearch();
+  else if(e.target.id==='msg-text')noteTyping();
+});
 document.addEventListener('keydown',function(e){
   if(e.key==='Enter'&&e.target&&e.target.id==='search-input'){e.preventDefault();e.target.blur()}
 });
+/* mic hold-to-record (delegated so the button exists whenever the convo screen does) */
+document.addEventListener('pointerdown',function(e){if(e.target&&e.target.id==='msg-mic'){e.preventDefault();startRec()}});
+document.addEventListener('pointerup',function(e){if(mediaRec)stopRec()});
+document.addEventListener('pointercancel',function(){if(mediaRec)stopRec()});
+
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;
   var a=document.activeElement;
