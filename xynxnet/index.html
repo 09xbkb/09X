@@ -349,6 +349,15 @@
   .vid .vfoot{display:flex;gap:8px;padding:10px 14px 14px;align-items:center}
   .vid .vfoot button{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:.8rem}
   .post .head{cursor:pointer}
+  .react-pill{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:999px;padding:4px 9px;font-size:.78rem}
+  .react-pill.on{border-color:var(--accent);background:rgba(139,92,246,.15)}
+  .react-opts{display:flex;gap:6px;padding:8px 2px 0}
+  .react-opts button{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:.95rem}
+  .repost-tag{font-size:.75rem;color:var(--faint);margin:16px 4px -6px}
+  .icon-btn{position:relative}
+  .ndot{position:absolute;top:-4px;right:-4px;background:var(--accent);color:#fff;font-size:.58rem;font-weight:700;border-radius:999px;padding:1px 5px}
+  .saved-h{padding:18px 4px 8px;font-family:'Space Grotesk',sans-serif;font-size:1rem}
+  .msg img{max-width:220px;border-radius:12px;display:block;margin-bottom:4px}
   @media(prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
   }
@@ -377,6 +386,8 @@
   <header class="topbar">
     <span class="word">XYNXNET</span>
     <div class="actions">
+      <button class="icon-btn" id="search-btn" title="search">🔍</button>
+      <button class="icon-btn" id="notif-btn" title="notifications">🔔</button>
       <button class="icon-btn" id="theme-btn" title="themes">🎨</button>
     </div>
   </header>
@@ -415,6 +426,8 @@
           </div>
           <div class="msgs" id="msgs"></div>
           <div class="msg-input">
+            <button class="send" id="msg-pic" style="background:rgba(255,255,255,.08)">📷</button>
+            <input type="file" id="msg-pic-input" accept="image/*" hidden>
             <input id="msg-text" type="text" placeholder="message…" autocomplete="off">
             <button class="send" id="msg-send">↑</button>
           </div>
@@ -466,6 +479,8 @@
           </div>
         </div>
         <div id="prof-feed"></div>
+        <h3 class="saved-h">🔖 saved</h3>
+        <div id="prof-saved"></div>
       </section>
 
       <!-- CHANNEL -->
@@ -489,6 +504,15 @@
           </div>
         </div>
         <div id="chan-feed"></div>
+      </section>
+
+      <!-- SEARCH -->
+      <section class="screen" id="s-search">
+        <div class="chat-head"><h2>search</h2></div>
+        <div style="padding:12px 14px">
+          <input id="search-input" type="text" placeholder="search channels, communities, posts…" autocomplete="off" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:.9rem;outline:none">
+        </div>
+        <div id="search-results" style="padding:0 14px 20px"></div>
       </section>
 
     </main>
@@ -524,6 +548,15 @@
       <input id="comment-text" type="text" placeholder="say it…" autocomplete="off">
       <button class="send" id="comment-send">↑</button>
     </div>
+  </div>
+</div>
+
+<!-- notifications -->
+<div class="modal" id="notifs">
+  <div class="sheet">
+    <button class="close" data-close>✕</button>
+    <h3>notifications</h3>
+    <div id="notif-list" style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px"></div>
   </div>
 </div>
 
@@ -655,7 +688,7 @@ function enterApp(u,silent){
   $('#teaser-pfp').textContent=myHandle.replace(/^@/,'').slice(0,2);
   $('#prof-pfp').textContent=myHandle.replace(/^@/,'').slice(0,2);
   loadFeed();loadComments(function(){renderFeed();renderShorts()});
-  loadProfiles(function(){paintMyProfile();renderFeed()});loadFollows();
+  loadProfiles(function(){paintMyProfile();renderFeed()});loadFollows();loadReactions(function(){renderFeed()});loadBookmarks(function(){renderFeed()});loadNotifs();setInterval(loadNotifs,30000);
   if(!silent)toast('welcome to the network, '+myHandle);
 }
 function paintMyProfile(){
@@ -747,6 +780,7 @@ function toggleLike(pid){
   var liked=!likedSet[pid];likedSet[pid]=liked;
   var n=posts[i].likes+(liked?1:-1);if(n<0)n=0;
   posts[i].likes=n;renderFeed();renderShorts();
+  if(liked)notify(posts[i].author,'like',posts[i].id,'liked your post');
   sb.from('posts').update({likes:n}).eq('id',posts[i].id).then(function(r){if(r.error)toast('like did not stick')});
 }
 function doShare(pid){
@@ -763,6 +797,125 @@ function miniPfp(handle){
   var name=String(handle||'@?').replace(/^@/,'');var hue=0;
   for(var k=0;k<name.length;k++)hue=(hue*31+name.charCodeAt(k))%360;
   return pfp({init:esc(name.slice(0,2)||'?'),c:['hsl('+hue+',70%,55%)','hsl('+((hue+60)%360)+',70%,50%)','hsl('+((hue+300)%360)+',70%,60%)']});
+}
+
+/* ---------- reactions, bookmarks, notifications, reposts ---------- */
+var reactionsByPost={},myReactions={},reactEmojis=['😂','🔥','💀','🙌','😮'];
+function loadReactions(cb){
+  sb.from('reactions').select('*').limit(2000).then(function(r){
+    reactionsByPost={};myReactions={};
+    (r.data||[]).forEach(function(x){
+      var m=reactionsByPost[x.post_id]=reactionsByPost[x.post_id]||{};
+      m[x.emoji]=(m[x.emoji]||0)+1;
+      if(me&&x.user_id===me.id)(myReactions[x.post_id]=myReactions[x.post_id]||[]).push(x.emoji);
+    });
+    if(cb)cb();
+  });
+}
+function reactPills(pid){
+  var counts=reactionsByPost[pid]||{};var mine=myReactions[pid]||[];
+  return Object.keys(counts).map(function(e2){
+    return '<button class="react-pill'+(mine.indexOf(e2)>=0?' on':'')+'" data-react="'+pid+':'+e2+'">'+e2+' '+(counts[e2]>1?counts[e2]:'')+'</button>';
+  }).join('');
+}
+function reactOptsRow(pid){
+  return '<div class="react-opts" id="ropts-'+pid+'" style="display:none">'+reactEmojis.map(function(e2){
+    return '<button data-react="'+pid+':'+e2+'">'+e2+'</button>';
+  }).join('')+'</div>';
+}
+function toggleReact(pid,emoji){
+  if(!me){toast('sign in to react');return}
+  var mine=myReactions[pid]||[];
+  if(mine.indexOf(emoji)>=0){
+    sb.from('reactions').delete().eq('post_id',pid).eq('user_id',me.id).eq('emoji',emoji).then(function(){loadReactions(function(){renderFeed()})});
+  }else{
+    sb.from('reactions').insert({post_id:pid,user_id:me.id,handle:myHandle,emoji:emoji}).then(function(r){
+      if(r.error){toast('react failed');return}
+      var p=posts.find(function(x){return String(x.id)===String(pid)});
+      if(p)notify(p.author,'react',pid,'reacted '+emoji+' to your post');
+      loadReactions(function(){renderFeed()});
+    });
+  }
+}
+var myBookmarks={};
+function loadBookmarks(cb){
+  if(!me){if(cb)cb();return}
+  sb.from('bookmarks').select('post_id').limit(1000).then(function(r){
+    myBookmarks={};(r.data||[]).forEach(function(b){myBookmarks[b.post_id]=true});
+    if(cb)cb();
+  });
+}
+function toggleBookmark(pid){
+  if(!me){toast('sign in to save');return}
+  if(myBookmarks[pid]){
+    sb.from('bookmarks').delete().eq('post_id',pid).eq('user_id',me.id).then(function(){loadBookmarks(function(){renderFeed()})});
+  }else{
+    sb.from('bookmarks').insert({post_id:pid,user_id:me.id}).then(function(r){
+      if(r.error){toast('save failed');return}
+      toast('saved. it is on your profile now');
+      loadBookmarks(function(){renderFeed()});
+    });
+  }
+}
+function toggleRepost(pid){
+  if(!me){toast('sign in to repost');return}
+  var p=posts.find(function(x){return String(x.id)===String(pid)});if(!p)return;
+  var target=p.repost_of||p.id;
+  if(myRepostOf[target]){
+    sb.from('posts').delete().eq('id',myRepostOf[target]).then(function(r){
+      if(r.error){toast('unrepost failed');return}
+      loadFeed();
+    });
+  }else{
+    sb.from('posts').insert({author:me.id,handle:myHandle,text:'',repost_of:target}).then(function(r){
+      if(r.error){toast('repost failed: '+r.error.message);return}
+      var orig=posts.find(function(x){return String(x.id)===String(target)});
+      if(orig)notify(orig.author,'repost',target,'reposted your post');
+      toast('reposted to your channel');
+      loadFeed();
+    });
+  }
+}
+var notifs=[],unreadNotifs=0;
+function loadNotifs(cb){
+  if(!me){if(cb)cb();return}
+  sb.from('notifications').select('*').eq('recipient',me.id).order('created_at',{ascending:false}).limit(50).then(function(r){
+    notifs=r.data||[];unreadNotifs=notifs.filter(function(n){return !n.read}).length;
+    paintBell();if(cb)cb();
+  });
+}
+function paintBell(){
+  var b=$('#notif-btn');if(!b)return;
+  b.innerHTML='🔔'+(unreadNotifs?'<span class="ndot">'+unreadNotifs+'</span>':'');
+}
+function notify(recipientId,kind,postId,text){
+  if(!me||!recipientId||recipientId===me.id)return;
+  sb.from('notifications').insert({recipient:recipientId,actor:me.id,actor_handle:myHandle,kind:kind,post_id:postId,text:text}).then(function(){});
+}
+function openNotifs(){
+  $('#notif-list').innerHTML=notifs.length?notifs.map(function(n){
+    return '<div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 14px">'
+      +'<div style="font-size:.85rem">'+(n.read?'':'<b style="color:var(--accent2)">● </b>')+'<b>'+esc(n.actor_handle||'someone')+'</b> '+esc(n.text||n.kind)+'</div>'
+      +'<div style="font-size:.7rem;color:var(--faint);margin-top:3px">'+ago(n.created_at)+'</div></div>';
+  }).join(''):'<div style="color:var(--faint);text-align:center;padding:18px 0">nothing yet. the network is quiet.</div>';
+  $('#notifs').classList.add('on');
+  if(unreadNotifs)sb.from('notifications').update({read:true}).eq('recipient',me.id).eq('read',false).then(function(){loadNotifs()});
+}
+function doSearch(){
+  var q=$('#search-input').value.trim().toLowerCase();
+  if(!q){$('#search-results').innerHTML='';return}
+  var chanHits=[];Object.keys(profilesByHandle).forEach(function(k){var p=profilesByHandle[k];if((p.username+' '+(p.display_name||'')).toLowerCase().indexOf(q)>=0)chanHits.push(p)});
+  var commHits=comms.filter(function(c){return ((c.name||'')+' '+(c.description||'')).toLowerCase().indexOf(q)>=0});
+  var postHits=posts.filter(function(p){return (p.text||'').toLowerCase().indexOf(q)>=0&&!p.repost_of});
+  var h='';
+  if(chanHits.length)h+='<div class="theme-row" style="border:none;color:var(--faint)">channels</div>'+chanHits.slice(0,8).map(function(p){
+    return '<div class="chat-item" data-chan="@'+esc(p.username)+'">'+miniPfp('@'+p.username)+'<div class="who"><b>'+esc(p.display_name||p.username)+founderBadge('@'+p.username)+'</b><p>@'+esc(p.username)+'</p></div></div>';
+  }).join('');
+  if(commHits.length)h+='<div class="theme-row" style="border:none;color:var(--faint)">communities</div>'+commHits.slice(0,8).map(function(c){
+    return '<div class="chat-item" data-scomm="'+c.id+'"><div class="who"><b>'+esc(c.name)+'</b><p>'+esc((c.description||'').slice(0,60))+(c.type==='broadcast'?' · 📢':'')+'</p></div></div>';
+  }).join('');
+  if(postHits.length)h+='<div class="theme-row" style="border:none;color:var(--faint)">posts</div>'+postHits.slice(0,12).map(function(p){return postHTML(p,likedSet[p.id])}).join('');
+  $('#search-results').innerHTML=h||'<div style="color:var(--faint);text-align:center;padding:30px">nothing matches \u201c'+esc(q)+'\u201d yet.</div>';
 }
 
 /* ---------- follows + channels ---------- */
@@ -816,6 +969,7 @@ function toggleFollow(){
     sb.from('follows').insert({follower:me.id,following:uid}).then(function(r){
       if(r.error){toast('follow failed: '+r.error.message);return}
       toast('following @'+openChannel.username);
+      notify(openChannel.id,'follow',null,'started following you');
       loadFollows(function(){if(openChannel)openChannelByHandle('@'+openChannel.username)});
     });
   }
@@ -870,18 +1024,33 @@ function loadMsgs(){
   sb.from('messages').select('*').or('and(sender.eq.'+me.id+',recipient.eq.'+openChatUser.id+'),and(sender.eq.'+openChatUser.id+',recipient.eq.'+me.id+')').order('created_at',{ascending:true}).limit(200).then(function(r){
     var atBottom=$('#msgs').scrollTop+$('#msgs').clientHeight>=$('#msgs').scrollHeight-60;
     $('#msgs').innerHTML=(r.data||[]).map(function(m){
-      return '<div class="msg '+(m.sender===me.id?'me':'them')+'">'+esc(m.text)+'</div>';
+      return '<div class="msg '+(m.sender===me.id?'me':'them')+'">'+(m.media_url?'<img src="'+esc(m.media_url)+'" alt="" loading="lazy">':'')+esc(m.text||'')+'</div>';
     }).join('')||'<div style="color:var(--faint);text-align:center;margin-top:20px">say the first thing.</div>';
     if(atBottom)$('#msgs').scrollTop=$('#msgs').scrollHeight;
   });
 }
 function sendMsg(){
-  var v=$('#msg-text').value.trim();if(!v||!openChatUser||!me)return;
+  var v=$('#msg-text').value.trim();
+  var f=$('#msg-pic-input').files[0];
+  if((!v&&!f)||!openChatUser||!me)return;
   $('#msg-text').value='';
-  sb.from('messages').insert({sender:me.id,sender_handle:myHandle,recipient:openChatUser.id,recipient_handle:openChatUser.handle,text:v}).then(function(r){
-    if(r.error){toast('message failed: '+r.error.message);return}
-    loadMsgs();
-  });
+  var finish=function(url){
+    sb.from('messages').insert({sender:me.id,sender_handle:myHandle,recipient:openChatUser.id,recipient_handle:openChatUser.handle,text:v,media_url:url}).then(function(r){
+      if(r.error){toast('message failed: '+r.error.message);return}
+      $('#msg-pic-input').value='';
+      loadMsgs();
+    });
+  };
+  if(f){
+    if(f.size>20*1024*1024){toast('keep pics under 20MB');return}
+    var ext=(f.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+    var path=me.id+'/dm-'+Date.now()+'.'+ext;
+    toast('uploading pic...');
+    sb.storage.from('media').upload(path,f).then(function(r){
+      if(r.error){toast('upload failed: '+r.error.message);return}
+      finish(sb.storage.from('media').getPublicUrl(path).data.publicUrl);
+    });
+  } else finish(null);
 }
 
 /* ---------- real communities ---------- */
@@ -973,12 +1142,19 @@ function sendComment(){
   $('#comment-text').value='';
   sb.from('comments').insert({post_id:openCommentPost,author:me.id,handle:myHandle,text:v}).then(function(r){
     if(r.error){toast('comment failed: '+r.error.message);return}
+    var cp=posts.find(function(x){return String(x.id)===String(openCommentPost)});
+    if(cp)notify(cp.author,'comment',cp.id,'commented on your post');
     loadComments(function(){renderFeed();openComments(openCommentPost)});
   });
 }
 
 /* ---------- render: feed ---------- */
 function postHTML(p,liked){
+  if(p.repost_of){
+    var orig=posts.find(function(x){return String(x.id)===String(p.repost_of)});
+    if(!orig)return '';
+    return '<div class="repost-tag">🔁 '+esc(p.handle)+' reposted</div>'+postHTML(orig,likedSet[orig.id]);
+  }
   var name=esc(String(p.handle||'@ghost').replace(/^@/,''));
   var hue=0;for(var k=0;k<name.length;k++)hue=(hue*31+name.charCodeAt(k))%360;
   var per={init:esc((name.slice(0,2)||'?')),c:['hsl('+hue+',70%,55%)','hsl('+((hue+60)%360)+',70%,50%)','hsl('+((hue+300)%360)+',70%,60%)']};
@@ -992,11 +1168,17 @@ function postHTML(p,liked){
     +'<div class="foot">'
     +'<button class="like'+(liked?' liked':'')+'" data-like="'+p.id+'">'+(liked?'❤️':'🤍')+' <span>'+p.likes+'</span></button>'
     +'<button data-comment="'+p.id+'">💬 <span>'+(commentsByPost[p.id]||[]).length+'</span></button>'
-    +'<button data-share="'+p.id+'">↗ share</button>'
-    +'</div></article>';
+    +'<button data-repost="'+p.id+'"'+(myRepostOf[p.id]?' class="liked"':'')+'>🔁 <span>'+(repostCounts[p.id]||0)+'</span></button>'
+    +'<button data-bookmark="'+p.id+'">'+(myBookmarks[p.id]?'🔖':'🏷️')+'</button>'
+    +reactPills(p.id)
+    +'<button data-reactadd="'+p.id+'">😀</button>'
+    +'<button data-share="'+p.id+'">↗</button>'
+    +'</div>'+reactOptsRow(p.id)+'</article>';
 }
-var likedSet={};
+var likedSet={},repostCounts={},myRepostOf={};
 function renderFeed(){
+  repostCounts={};myRepostOf={};
+  posts.forEach(function(p){if(p.repost_of){repostCounts[p.repost_of]=(repostCounts[p.repost_of]||0)+1;if(me&&p.author===me.id)myRepostOf[p.repost_of]=p.id}});
   var html=posts.length?posts.map(function(p){return postHTML(p,likedSet[p.id])}).join('')
     :'<div class="post" style="text-align:center;color:var(--faint);padding:34px 18px">nothing here yet.<br>be the first real post on the network.</div>';
   $('#feed').innerHTML=html;
@@ -1004,6 +1186,8 @@ function renderFeed(){
   $('#prof-feed').innerHTML=mine.length?mine.slice(0,3).map(function(p){return postHTML(p,likedSet[p.id])}).join('')
     :'<div class="post" style="text-align:center;color:var(--faint);padding:24px">your posts will live here</div>';
   var ps=document.querySelector('.prof-stats b');if(ps)ps.textContent=mine.length;
+  var saved=posts.filter(function(p){return myBookmarks[p.id]});
+  $('#prof-saved').innerHTML=saved.length?saved.map(function(p){return postHTML(p,likedSet[p.id])}).join(''):'<div class="post" style="text-align:center;color:var(--faint);padding:20px">nothing saved yet. tap 🏷️ on any post to keep it here.</div>';
 }
 
 /* ---------- render: shorts ---------- */
@@ -1083,7 +1267,7 @@ function applyStoredTheme(){
 
 /* ---------- events ---------- */
 document.addEventListener('click',function(e){
-  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,[data-chan],.comm');
+  var t=e.target.closest('[data-tab],[data-user],[data-join],[data-theme],[data-pack],[data-close],[data-like],[data-comment],[data-share],#post-btn,#msg-send,#convo-back,#composer-teaser,#theme-btn,#prof-theme-btn,#enter-btn,#pic-btn,#vid-btn,#signout-btn,.toggle,#rail-post,#new-chat-btn,#new-comm-btn,#nc-create,#comm-back,#cpost-send,#comment-send,#edit-profile-btn,#avatar-btn,#banner-btn,#save-profile,#chan-follow,#chan-msg,#nc-type-open,#nc-type-broadcast,#notif-btn,#search-btn,#msg-pic,[data-react],[data-reactadd],[data-repost],[data-bookmark],[data-scomm],[data-chan],.comm');
   if(!t)return;
   if(t.dataset.tab)go(t.dataset.tab);
   else if(t.id==='chan-follow')toggleFollow();
@@ -1132,6 +1316,14 @@ document.addEventListener('click',function(e){
   else if(t.id==='save-profile')doSaveProfile();
   else if(t.id==='new-chat-btn')openPeople();
   else if(t.id==='new-comm-btn'){if(!me){toast('sign in first');return}$('#new-comm').classList.add('on')}
+  else if(t.id==='notif-btn')openNotifs();
+  else if(t.id==='search-btn')go('search');
+  else if(t.id==='msg-pic')$('#msg-pic-input').click();
+  else if(t.dataset.reactadd!==undefined){var ro=$('#ropts-'+t.dataset.reactadd);if(ro)ro.style.display=ro.style.display==='none'?'flex':'none'}
+  else if(t.dataset.react!==undefined){var rp=t.dataset.react.split(':');toggleReact(rp[0],rp.slice(1).join(':'))}
+  else if(t.dataset.repost!==undefined)toggleRepost(t.dataset.repost);
+  else if(t.dataset.bookmark!==undefined)toggleBookmark(t.dataset.bookmark);
+  else if(t.dataset.scomm!==undefined){openCommById(t.dataset.scomm);go('comm')}
   else if(t.id==='nc-type-open')setNcType('open');
   else if(t.id==='nc-type-broadcast')setNcType('broadcast');
   else if(t.id==='nc-create')createComm();
@@ -1146,6 +1338,7 @@ document.addEventListener('click',function(e){
   else if(t.dataset.close!==undefined)t.closest('.modal').classList.remove('on');
   else if(t.closest('.comm')&&t.closest('.comm').dataset.comm)openCommById(t.closest('.comm').dataset.comm);
 });
+document.addEventListener('input',function(e){if(e.target&&e.target.id==='search-input')doSearch()});
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;
   var a=document.activeElement;
