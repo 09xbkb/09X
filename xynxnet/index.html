@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>XYNXNET</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#05050a">
@@ -39,6 +39,8 @@
   }
   button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
   input,textarea{font-family:inherit;color:inherit}
+  /* ios: inputs under 16px trigger focus auto-zoom; lock at 16px */
+  input,textarea{font-size:16px !important}
   ::placeholder{color:var(--faint)}
 
   #stars{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5}
@@ -89,7 +91,7 @@
   .topbar{
     position:sticky;top:0;z-index:20;
     display:flex;align-items:center;justify-content:space-between;
-    padding:calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
+    padding:calc(12px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) 12px calc(16px + env(safe-area-inset-left, 0px));
     background:rgba(5,5,10,.8);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
     border-bottom:1px solid var(--line);
   }
@@ -436,7 +438,7 @@
           <div class="msg-input">
             <button class="send" id="msg-pic" style="background:rgba(255,255,255,.08)">📷</button>
             <input type="file" id="msg-pic-input" accept="image/*" hidden>
-            <input id="msg-text" type="text" placeholder="message…" autocomplete="off">
+            <input id="msg-text" type="text" enterkeyhint="send" placeholder="message…" autocomplete="off">
             <button class="send" id="msg-send">↑</button>
           </div>
         </div>
@@ -458,7 +460,7 @@
           <p id="comm-desc" style="padding:10px 16px 0;color:var(--dim);font-size:.85rem"></p>
           <div class="msgs" id="comm-posts" style="gap:12px"></div>
           <div class="msg-input">
-            <input id="cpost-text" type="text" placeholder="post to this community…" autocomplete="off">
+            <input id="cpost-text" type="text" enterkeyhint="send" placeholder="post to this community…" autocomplete="off">
             <button class="send" id="cpost-send">↑</button>
           </div>
         </div>
@@ -518,7 +520,7 @@
       <section class="screen" id="s-search">
         <div class="chat-head"><h2>search</h2></div>
         <div style="padding:12px 14px">
-          <input id="search-input" type="text" placeholder="search channels, communities, posts…" autocomplete="off" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:.9rem;outline:none">
+          <input id="search-input" type="text" enterkeyhint="search" placeholder="search channels, communities, posts…" autocomplete="off" style="width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:12px;padding:12px 16px;font-size:.9rem;outline:none">
         </div>
         <div id="search-results" style="padding:0 14px 20px"></div>
       </section>
@@ -553,7 +555,7 @@
     <h3>comments</h3>
     <div id="comment-list" style="max-height:46vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;margin-bottom:12px"></div>
     <div class="msg-input" style="padding:0;border:none">
-      <input id="comment-text" type="text" placeholder="say it…" autocomplete="off">
+      <input id="comment-text" type="text" enterkeyhint="send" placeholder="say it…" autocomplete="off">
       <button class="send" id="comment-send">↑</button>
     </div>
   </div>
@@ -1374,6 +1376,9 @@ document.addEventListener('click',function(e){
   else if(t.closest('.comm')&&t.closest('.comm').dataset.comm)openCommById(t.closest('.comm').dataset.comm);
 });
 document.addEventListener('input',function(e){if(e.target&&e.target.id==='search-input')doSearch()});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&e.target&&e.target.id==='search-input'){e.preventDefault();e.target.blur()}
+});
 document.addEventListener('keydown',function(e){
   if(e.key!=='Enter')return;
   var a=document.activeElement;
