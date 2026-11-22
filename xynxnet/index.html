@@ -1098,18 +1098,23 @@ function sendMsg(){
   var v=$('#msg-text').value.trim();
   var f=$('#msg-pic-input').files[0];
   if((!v&&!f)||!openChatUser||!me)return;
+  /* capture sender and recipient once at send time, so a chat switch during
+     the async upload can't redirect the message into the wrong thread */
+  var senderId=me.id,senderHandle=myHandle,recipId=openChatUser.id,recipHandle=openChatUser.handle;
   $('#msg-text').value='';
+  $('#msg-pic-input').value='';
   var finish=function(url){
-    sb.from('messages').insert({sender:me.id,sender_handle:myHandle,recipient:openChatUser.id,recipient_handle:openChatUser.handle,text:v,media_url:url}).then(function(r){
+    sb.from('messages').insert({sender:senderId,sender_handle:senderHandle,recipient:recipId,recipient_handle:recipHandle,text:v,media_url:url}).then(function(r){
       if(r.error){toast('message failed: '+r.error.message);return}
-      $('#msg-pic-input').value='';
-      loadMsgs();
+      /* keep the completion UI tied to the conversation this was sent to */
+      if(openChatUser&&openChatUser.id===recipId)loadMsgs();
+      else toast('sent to '+recipHandle.replace(/^@/,''));
     });
   };
   if(f){
     if(f.size>20*1024*1024){toast('keep pics under 20MB');return}
     var ext=(f.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
-    var path=me.id+'/'+openChatUser.id+'/dm-'+Date.now()+'.'+ext;
+    var path=senderId+'/'+recipId+'/dm-'+Date.now()+'.'+ext;
     toast('uploading pic...');
     sb.storage.from('dm-media').upload(path,f).then(function(r){
       if(r.error){toast('upload failed: '+r.error.message);return}
