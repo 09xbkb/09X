@@ -552,6 +552,19 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   .call-ctl{position:absolute;bottom:90px;left:0;right:0;display:flex;gap:16px;justify-content:center;z-index:3}
   .cc{width:54px;height:54px;border-radius:50%;background:rgba(30,30,50,.85);font-size:1.3rem}.cc.end{background:#ef4444}
   .call-foot{position:absolute;bottom:34px;left:0;right:0;text-align:center;font-size:.76rem;color:var(--faint);z-index:3}
+  .vr-card{margin:12px 16px 0;background:linear-gradient(160deg,rgba(124,58,237,.18),rgba(20,16,40,.7));border:1px solid rgba(167,139,250,.35);border-radius:18px;padding:14px}
+  .vr-top{display:flex;justify-content:space-between;align-items:center;gap:8px}.vr-live{font-size:.72rem;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--dim);white-space:nowrap}
+  .vr-stage,.vr-lis{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}.vr-lis{gap:10px}
+  .vr-av{display:flex;flex-direction:column;align-items:center;font-size:.72rem;color:var(--dim);position:relative;cursor:pointer;max-width:64px}
+  .vr-av .vr-ring{border-radius:50%;padding:3px;border:2px solid transparent;transition:box-shadow .15s,border-color .15s}
+  .vr-av.talk .vr-ring{border-color:var(--accent);box-shadow:0 0 14px 3px var(--accent)}
+  .vr-av.big .pfp{width:52px;height:52px}.vr-av.sm .pfp{width:36px;height:36px;font-size:.7rem}.vr-av i{font-style:normal;font-size:.8rem}
+  .vr-av span{max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .vr-act,.vr-mod,.vr-start{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center}.vr-act button,.vr-mod button,.vr-start button{flex:1;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);font-size:.85rem}
+  .vr-act .pri,.vr-start button{background:linear-gradient(115deg,var(--accent),var(--accent2));color:#fff;border:0;font-weight:600}.vr-act .warn,.vr-mod .warn{color:#fca5a5;border-color:rgba(239,68,68,.45)}
+  .vr-start input{flex:2;padding:10px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.3);color:var(--ink)}.vr-empty b{font-size:.9rem}
+  .vr-pill{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);display:none;align-items:center;gap:10px;z-index:200;background:rgba(14,14,26,.96);border:1px solid var(--accent);border-radius:999px;padding:6px 8px 6px 14px;font-size:.8rem}
+  .vr-pill.on{display:flex}.vr-pill button{background:#ef4444;color:#fff;border-radius:999px;padding:5px 12px;font-size:.78rem}
 </style>
 </head>
 <body class="anim-pfps">
@@ -655,6 +668,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
             <button class="join" id="comm-join" style="margin-left:auto"></button>
           </div>
           <p id="comm-desc" style="padding:10px 16px 0;color:var(--dim);font-size:.85rem"></p>
+          <div id="vr-card"></div><div id="vr-audio" style="display:none"></div>
           <input type="file" id="gx-file" accept="image/*,video/*" hidden>
           <div class="msgs" id="comm-posts" style="gap:12px"></div>
           <div class="msg-input">
@@ -969,6 +983,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   </div>
 </div>
 <div class="modal" id="gx-light"><button class="orb-x" data-close style="position:absolute;top:14px;right:14px;z-index:2">✕</button><div id="gx-light-body"></div></div>
+<div id="vr-pill" class="vr-pill"><span>🎙️ live in <b id="vr-pill-t"></b></span><button id="vr-pill-leave">leave</button></div>
 <div id="call-banner" class="call-banner">
   <div class="cb-top"><div id="cb-pfp"></div><div><b>XYNXNET · now</b><div id="cb-text"></div></div></div>
   <div class="cb-act"><button id="call-decline" class="cb-d">decline</button><button id="call-accept" class="cb-a">accept</button></div>
@@ -1833,6 +1848,256 @@ function callSwAction(act){
   });
 }
 if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('message',function(e){if(e.data&&e.data.type==='call-action'&&me)callSwAction(e.data.action)});
+/* ---------- v3 batch 11: voice rooms ---------- */
+var VR={room:null,members:[],pcs:{},local:null,lastSig:0,mic:true,sel:null,timers:[],ac:null,an:{},cardT:null,busy:false,mySpeak:false,card:null,showStartInput:false};
+function vrFresh(m){return Date.now()-new Date(m.last_seen)<30000}
+function vrIsSpk(m){return m&&(m.role==='host'||m.role==='speaker')}
+function vrMe(){return VR.members.find(function(m){return me&&m.user_id===me.id})}
+function vrOpenCard(){
+  clearInterval(VR.cardT);vrLoadCard();
+  VR.cardT=setInterval(function(){if(!openComm||$('#comm-view').style.display==='none'){clearInterval(VR.cardT);return}vrLoadCard()},4000);
+}
+function vrLoadCard(){
+  if(!openComm||!me)return;var cid=openComm.id;
+  sb.from('voice_rooms').select('*').eq('community_id',cid).is('ended_at',null).maybeSingle().then(function(r){
+    if(!openComm||openComm.id!==cid)return;
+    var room=r.data||null;
+    if(!room){VR.card=null;if(VR.room&&VR.room.community_id===cid){vrCleanup();toast('room ended')}vrPaint();return}
+    sb.from('voice_members').select('*').eq('room_id',room.id).then(function(q){
+      if(!openComm||openComm.id!==cid)return;
+      VR.card={room:room,members:(q.data||[]).filter(function(m){return m.role!=='kicked'&&vrFresh(m)})};
+      if(VR.room&&VR.room.id===room.id)VR.members=q.data||[];
+      vrPaint();
+    });
+  });
+}
+function vrAv(m,sz){
+  var pr=profilesByHandle[('@'+String(m.handle).replace(/^@/,'')).toLowerCase()];
+  var nm=String(m.handle).replace(/^@/,'');
+  return '<div class="vr-av '+sz+'" data-vru="'+m.user_id+'" data-vrm="'+m.user_id+'"><div class="vr-ring">'+miniPfp('@'+nm)+'</div><span>'+esc(nm)+'</span>'+(sz==='big'?'<i>'+(m.muted_by_mod?'🔇':'🎙️')+'</i>':'<i>'+(m.hand?'✋':'👂')+'</i>')+'</div>';
+}
+function vrPaint(){
+  var el=$('#vr-card');if(!el)return;
+  var c=VR.card,inRoom=VR.room&&c&&VR.room.id===c.room.id;
+  if(!c){
+    if(!(myMemberships[openComm&&openComm.id])){el.innerHTML='';return}
+    el.innerHTML='<div class="vr-card vr-empty"><b>🎙️ voice room</b><div class="vr-start"><input id="vr-title" maxlength="40" placeholder="room name" autocomplete="off"><button id="vr-go">start</button></div></div>';return;
+  }
+  var spk=c.members.filter(vrIsSpk),lis=c.members.filter(function(m){return !vrIsSpk(m)});
+  var meM=c.members.find(function(m){return m.user_id===me.id});
+  var amHost=c.room.host===me.id&&inRoom;
+  var h='<div class="vr-card"><div class="vr-top"><b>🎙️ '+esc(c.room.title)+'</b><span class="vr-live">live · '+c.members.length+' in</span></div>';
+  h+='<div class="vr-stage">'+spk.map(function(m){return vrAv(m,'big')}).join('')+'</div>';
+  if(lis.length)h+='<div class="vr-lis">'+lis.map(function(m){return vrAv(m,'sm')}).join('')+'</div>';
+  if(amHost&&VR.sel){
+    var t=c.members.find(function(m){return m.user_id===VR.sel});
+    if(t&&t.user_id!==me.id){
+      h+='<div class="vr-mod"><b>'+esc(t.handle)+'</b>';
+      if(!vrIsSpk(t))h+='<button data-vract="stage">bring to stage</button>';
+      else{h+='<button data-vract="'+(t.muted_by_mod?'unmute':'mute')+'">'+(t.muted_by_mod?'unmute':'mute')+'</button><button data-vract="down">to listeners</button>'}
+      h+='<button data-vract="kick" class="warn">remove</button></div>';
+    }
+  }
+  h+='<div class="vr-act">';
+  if(!inRoom){
+    h+=VR.room?'<button disabled>leave your other room first</button>':'<button class="pri" id="vr-raise">raise hand</button><button id="vr-listen">listen</button>';
+  }else{
+    if(vrIsSpk(meM))h+='<button id="vr-mic" class="pri">'+((VR.mic&&!(meM&&meM.muted_by_mod))?'🎙️ mute':'🔇 unmute')+'</button>'+(meM.role==='speaker'?'<button id="vr-down">step down</button>':'');
+    else h+='<button id="vr-hand" class="pri">'+(meM&&meM.hand?'lower hand':'✋ raise hand')+'</button>';
+    h+='<button id="vr-leave" class="warn">leave</button>';
+  }
+  h+='</div></div>';
+  el.innerHTML=h;vrGlow();
+}
+function vrStart(){
+  var t=($('#vr-title').value||'').trim()||'open mic';
+  if(callPc||callRow){toast('finish your call first');return}
+  callGum(false).then(function(st){
+    sb.from('voice_rooms').insert({community_id:openComm.id,title:t,host:me.id,host_handle:myHandle}).select().single().then(function(r){
+      if(r.error||!r.data){st.getTracks().forEach(function(x){x.stop()});toast('a room is already live here');vrLoadCard();return}
+      sb.from('voice_members').insert({room_id:r.data.id,user_id:me.id,handle:myHandle,role:'host'}).then(function(q){
+        if(q.error){st.getTracks().forEach(function(x){x.stop()});toast('could not start the room');return}
+        vrEnter(r.data,st);
+      });
+    });
+  }).catch(function(){});
+}
+function vrJoinListener(hand){
+  if(!VR.card)return;if(callPc||callRow){toast('finish your call first');return}
+  var room=VR.card.room;
+  sb.from('voice_members').upsert({room_id:room.id,user_id:me.id,handle:myHandle,role:'listener',hand:!!hand,last_seen:new Date().toISOString()},{onConflict:'room_id,user_id',ignoreDuplicates:false}).then(function(r){
+    if(r.error){toast('could not join');return}
+    vrEnter(room,null);
+  });
+}
+function vrEnter(room,stream){
+  VR.room=room;VR.local=stream;VR.lastSig=0;VR.mic=true;VR.sel=null;
+  try{VR.ac=VR.ac||new (window.AudioContext||window.webkitAudioContext)();if(VR.ac.resume)VR.ac.resume()}catch(_){}
+  if(stream)vrAnalyse('me',stream);
+  VR.timers.push(setInterval(vrSync,2000),setInterval(vrSigPoll,1500),setInterval(vrBeat,8000),setInterval(vrGlow,150));
+  vrSync();vrLoadCard();
+  $('#vr-pill').classList.add('on');$('#vr-pill-t').textContent=room.title;
+}
+function vrBeat(){
+  if(!VR.room)return;
+  sb.from('voice_members').update({last_seen:new Date().toISOString()}).eq('room_id',VR.room.id).eq('user_id',me.id).then(function(){});
+  sb.rpc('vr_tick',{rid:VR.room.id}).then(function(){});
+}
+function vrAnalyse(key,stream){
+  if(!VR.ac||!stream.getAudioTracks().length)return;
+  try{var src=VR.ac.createMediaStreamSource(stream),an=VR.ac.createAnalyser();an.fftSize=512;src.connect(an);VR.an[key]={an:an,buf:new Uint8Array(an.fftSize)}}catch(_){}
+}
+function vrGlow(){
+  if(!VR.room)return;
+  document.querySelectorAll('#vr-card .vr-av').forEach(function(e){
+    var uid=e.dataset.vru,k=uid===me.id?'me':uid,a=VR.an[k],on=false;
+    if(a){a.an.getByteTimeDomainData(a.buf);var mx=0;for(var i=0;i<a.buf.length;i++){var v=Math.abs(a.buf[i]-128);if(v>mx)mx=v}on=mx>9;
+      if(k==='me'&&(!VR.mic||(vrMe()&&vrMe().muted_by_mod)))on=false}
+    e.classList.toggle('talk',on);
+  });
+}
+function vrSync(){
+  if(!VR.room)return;var rid=VR.room.id;
+  sb.from('voice_rooms').select('ended_at').eq('id',rid).maybeSingle().then(function(rr){
+    if(!VR.room||VR.room.id!==rid)return;
+    if(rr.data&&rr.data.ended_at){vrCleanup();toast('room ended');return}
+    sb.from('voice_members').select('*').eq('room_id',rid).then(function(q){
+      if(!VR.room||VR.room.id!==rid||!q.data)return;
+      VR.members=q.data;var m=vrMe();
+      if(!m){vrCleanup();toast('you left the room');return}
+      if(m.role==='kicked'){vrCleanup();toast('you were removed from the room');return}
+      var spk=vrIsSpk(m);
+      if(spk&&!VR.local){
+        callGum(false).then(function(st){VR.local=st;vrAnalyse('me',st);vrDropPcs();vrApplyMute();vrPaintLater()}).catch(function(){
+          sb.from('voice_members').update({role:'listener',hand:false}).eq('room_id',rid).eq('user_id',me.id).then(function(){})});
+        return;
+      }
+      if(!spk&&VR.local){VR.local.getTracks().forEach(function(t){t.stop()});VR.local=null;delete VR.an.me;vrDropPcs()}
+      vrApplyMute();vrReconcile();vrPaintLater();
+    });
+  });
+}
+function vrPaintLater(){
+  if(!VR.room)return;
+  var fresh=VR.members.filter(function(m){return m.role!=='kicked'&&vrFresh(m)});
+  VR.card={room:VR.room,members:fresh};vrPaint();
+}
+function vrApplyMute(){
+  var m=vrMe();if(!VR.local||!m)return;
+  var on=VR.mic&&!m.muted_by_mod;VR.local.getAudioTracks().forEach(function(t){t.enabled=on});
+}
+function vrDropPcs(){Object.keys(VR.pcs).forEach(vrClosePc)}
+function vrClosePc(uid){
+  var p=VR.pcs[uid];if(!p)return;try{p.pc.close()}catch(_){}
+  var a=document.getElementById('vra-'+uid);if(a)a.remove();delete VR.an[uid];delete VR.pcs[uid];
+}
+function vrReconcile(){
+  var m=vrMe();if(!m)return;var iSpk=vrIsSpk(m);
+  var want={};
+  VR.members.forEach(function(o){
+    if(o.user_id===me.id||o.role==='kicked'||!vrFresh(o)||hiddenUser(o.user_id))return;
+    var tSpk=vrIsSpk(o);if(!iSpk&&!tSpk)return;
+    want[o.user_id]={tSpk:tSpk};
+  });
+  Object.keys(VR.pcs).forEach(function(uid){
+    var p=VR.pcs[uid];
+    if(!want[uid]||p.tSpk!==want[uid].tSpk||p.iSpk!==iSpk)vrClosePc(uid);
+    else if(!p.up&&Date.now()-p.t>18000)vrClosePc(uid);
+  });
+  Object.keys(want).forEach(function(uid){
+    if(VR.pcs[uid])return;
+    var tSpk=want[uid].tSpk;
+    var initiator=(!iSpk&&tSpk)?true:(iSpk&&!tSpk)?false:(me.id<uid);
+    if(initiator)vrOffer(uid,iSpk,tSpk);
+  });
+}
+function vrMakePc(uid,iSpk,tSpk){
+  var pc=new RTCPeerConnection(ICE_CFG);
+  var rec={pc:pc,iSpk:iSpk,tSpk:tSpk,t:Date.now(),up:false,offerId:null};VR.pcs[uid]=rec;
+  if(iSpk&&VR.local)VR.local.getTracks().forEach(function(t){pc.addTrack(t,VR.local)});
+  else pc.addTransceiver('audio',{direction:'recvonly'});
+  pc.ontrack=function(e){
+    var st=e.streams[0]||new MediaStream([e.track]);
+    var a=document.getElementById('vra-'+uid);if(!a){a=document.createElement('audio');a.id='vra-'+uid;a.autoplay=true;$('#vr-audio').appendChild(a)}
+    a.srcObject=st;var p=a.play();if(p&&p.catch)p.catch(function(){});
+    vrAnalyse(uid,st);
+  };
+  pc.onconnectionstatechange=function(){if(pc.connectionState==='connected')rec.up=true;else if(pc.connectionState==='failed'&&VR.pcs[uid]===rec)vrClosePc(uid)};
+  return rec;
+}
+function vrOffer(uid,iSpk,tSpk){
+  var rec=vrMakePc(uid,iSpk,tSpk),pc=rec.pc;
+  pc.createOffer().then(function(o){return pc.setLocalDescription(o)}).then(function(){return callWaitIce(pc)}).then(function(){
+    if(VR.pcs[uid]!==rec||!VR.room)return;
+    return sb.from('voice_signals').insert({room_id:VR.room.id,from_user:me.id,to_user:uid,kind:'offer',sdp:JSON.stringify(pc.localDescription)}).select('id').single().then(function(r){if(r.data)rec.offerId=r.data.id});
+  }).catch(function(){vrClosePc(uid)});
+}
+function vrSigPoll(){
+  if(!VR.room||VR.busy)return;VR.busy=true;var rid=VR.room.id;
+  sb.from('voice_signals').select('*').eq('room_id',rid).eq('to_user',me.id).gt('id',VR.lastSig).order('id').limit(20).then(function(r){
+    var rows=r.data||[];
+    var chain=Promise.resolve();
+    rows.forEach(function(s){
+      VR.lastSig=Math.max(VR.lastSig,s.id);
+      chain=chain.then(function(){return vrHandleSig(s)}).catch(function(){});
+    });
+    return chain;
+  }).then(function(){VR.busy=false},function(){VR.busy=false});
+}
+function vrHandleSig(s){
+  var from=s.from_user;
+  if(s.kind==='answer'){
+    var rec=VR.pcs[from];
+    if(rec&&rec.offerId===s.re&&rec.pc.signalingState==='have-local-offer')return rec.pc.setRemoteDescription(JSON.parse(s.sdp));
+    return;
+  }
+  var m=vrMe(),iSpk=vrIsSpk(m);if(!iSpk)return;
+  var t=VR.members.find(function(o){return o.user_id===from});
+  if(!t||hiddenUser(from))return;
+  if(VR.pcs[from])vrClosePc(from);
+  var rec2=vrMakePc(from,iSpk,vrIsSpk(t)),pc=rec2.pc;
+  return pc.setRemoteDescription(JSON.parse(s.sdp)).then(function(){return pc.createAnswer()}).then(function(a){return pc.setLocalDescription(a)}).then(function(){return callWaitIce(pc)}).then(function(){
+    if(VR.pcs[from]!==rec2||!VR.room)return;
+    return sb.from('voice_signals').insert({room_id:VR.room.id,from_user:me.id,to_user:from,kind:'answer',sdp:JSON.stringify(pc.localDescription),re:s.id});
+  });
+}
+function vrCleanup(){
+  VR.timers.forEach(clearInterval);VR.timers=[];vrDropPcs();
+  if(VR.local)VR.local.getTracks().forEach(function(t){t.stop()});
+  VR.local=null;VR.an={};VR.room=null;VR.members=[];VR.sel=null;
+  $('#vr-pill').classList.remove('on');vrPaint();
+}
+function vrLeave(){
+  var rid=VR.room&&VR.room.id;vrCleanup();
+  if(rid)sb.rpc('vr_leave',{rid:rid}).then(function(){vrLoadCard()});
+}
+function vrUpd(uid,patch){
+  if(!VR.room)return;
+  sb.from('voice_members').update(patch).eq('room_id',VR.room.id).eq('user_id',uid).then(function(r){if(r.error)toast(String(r.error.message).indexOf('full')>=0?'stage is full (8 speakers)':'could not do that');vrSync()});
+}
+document.addEventListener('click',function(e){
+  var t=e.target.closest?e.target.closest('#vr-go,#vr-raise,#vr-listen,#vr-mic,#vr-down,#vr-hand,#vr-leave,#vr-pill-leave,[data-vract],#vr-card [data-vrm]'):null;if(!t)return;
+  if(t.id==='vr-go')vrStart();
+  else if(t.id==='vr-raise')vrJoinListener(true);
+  else if(t.id==='vr-listen')vrJoinListener(false);
+  else if(t.id==='vr-mic'){VR.mic=!VR.mic;vrApplyMute();vrPaintLater()}
+  else if(t.id==='vr-down')vrUpd(me.id,{role:'listener',hand:false});
+  else if(t.id==='vr-hand'){var m=vrMe();vrUpd(me.id,{hand:!(m&&m.hand)})}
+  else if(t.id==='vr-leave'||t.id==='vr-pill-leave')vrLeave();
+  else if(t.dataset.vract){
+    var u=VR.sel,a=t.dataset.vract;if(!u)return;
+    if(a==='stage')vrUpd(u,{role:'speaker',hand:false});
+    else if(a==='mute')vrUpd(u,{muted_by_mod:true});
+    else if(a==='unmute')vrUpd(u,{muted_by_mod:false});
+    else if(a==='down')vrUpd(u,{role:'listener'});
+    else if(a==='kick'){vrUpd(u,{role:'kicked'});}
+    VR.sel=null;
+  }
+  else if(t.dataset.vrm){
+    if(VR.room&&VR.card&&VR.card.room.host===me.id&&t.dataset.vrm!==me.id){VR.sel=VR.sel===t.dataset.vrm?null:t.dataset.vrm;vrPaintLater()}
+  }
+});
+window.addEventListener('pagehide',function(){if(VR.room)sb.rpc('vr_leave',{rid:VR.room.id})});
 function loadFeed(){
   var nowIso=new Date().toISOString();
   var q1=sb.from('posts').select('*').order('created_at',{ascending:false}).limit(50);
@@ -2594,7 +2859,7 @@ function openCommById(id){
   var jb=$('#comm-join');var j=myMemberships[openComm.id];
   jb.textContent=j?'in ✓':'join';jb.classList.toggle('joined',!!j);jb.dataset.join=openComm.id;
   $('#comms').style.display='none';$('#s-comm .chat-head').style.display='none';$('#comm-view').style.display='flex';
-  board=[];commPostsHtml='';applyGalaxy();loadCommPosts();
+  board=[];commPostsHtml='';applyGalaxy();loadCommPosts();vrOpenCard();
 }
 var commPostsHtml='',board=[];
 function loadCommPosts(){
