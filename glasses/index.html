@@ -435,6 +435,7 @@ function renderGSettings(l,backFn){
  l.innerHTML='';
  const add=(n,valFn,adj)=>{const d=glassItem(n,valFn,adj,true);l.appendChild(d);return d};
  add('Rain',()=>cfg.rain?'On':'Off',()=>{cfg.rain=!cfg.rain;save();if(game)toast('Applies on your next run')});
+ add('Road glare',()=>cfg.glare===false?'Off':'On',()=>{cfg.glare=cfg.glare===false;save()});
  add('Time of Day',()=>({night:'Night',dusk:'Dusk',day:'Day'})[cfg.tod]||'Night',dir=>{const T=['night','dusk','day'];let i=(T.indexOf(cfg.tod)+dir+3)%3;cfg.tod=T[i];save();if(game)toast('Applies on your next run')});
  add('Default Mode',()=>cfg.mode==='traffic'?'Traffic':'Chill roam',()=>{cfg.mode=cfg.mode==='traffic'?'chill':'traffic';save()});
  add('Graphics',()=>cfg.low?'Light (saves memory)':'Sharp',()=>{cfg.low=!cfg.low;save();if(game)toast('Applies on your next run')});
@@ -612,7 +613,7 @@ $('#startov').addEventListener('pointerdown',e=>{if(game&&!game.started){enableT
 
 /* ---------- Neon City Drive ---------- */
 let exP=null;const getExtra=()=>exP||(exP=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/DRACOLoader.js'),import('three/addons/postprocessing/ShaderPass.js'),import('three/addons/objects/Reflector.js')].map(p=>p.catch(e=>{console.warn('extra off',e);return null}))).then(m=>({GLTFLoader:m[0]&&m[0].GLTFLoader,DRACOLoader:m[1]&&m[1].DRACOLoader,ShaderPass:m[2]&&m[2].ShaderPass,Reflector:m[3]&&m[3].Reflector})));
-async function createNeon(THREE,host,mode0,FX){const X=await getExtra();const m=await import('./neon3d.js?v=6');return m.createNeon(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:arguments[4]||{}})}
+async function createNeon(THREE,host,mode0,FX){const X=await getExtra();const m=await import('./neon3d.js?v=7');return m.createNeon(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:arguments[4]||{}})}
 
 /* ---------- boot ---------- */
 function mainLoop(now){requestAnimationFrame(mainLoop);pollPad(now)}

@@ -111,7 +111,7 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
   vertexShader:`uniform mat4 textureMatrix;varying vec4 vUv;varying vec3 vW;
    void main(){vUv=textureMatrix*vec4(position,1.0);vW=(modelMatrix*vec4(position,1.0)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
   fragmentShader:`uniform vec3 color;uniform sampler2D tDiffuse;uniform sampler2D tAsph;uniform sampler2D tNoise;
-   uniform float time;uniform vec3 carPos;uniform vec2 carDir;uniform vec3 fogCol;uniform float fogD;uniform float blurK;uniform float brake;
+   uniform float time;uniform vec3 carPos;uniform vec2 carDir;uniform vec3 fogCol;uniform float fogD;uniform float blurK;uniform float brake;uniform float glare;
    varying vec4 vUv;varying vec3 vW;
    void main(){
     vec2 wp=vW.xz;
@@ -134,8 +134,8 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
     float rs=(.08+.80*fr)*wet;
     // lights
     vec2 d=wp-carPos.xz;float dl=length(d);vec2 dir=d/max(dl,1e-3);float fw=dot(dir,carDir);
-    float cone=smoothstep(.86,.985,fw)*smoothstep(52.,5.,dl)*step(0.,fw);
-    float cone2=smoothstep(.55,.95,fw)*smoothstep(20.,3.,dl)*step(0.,fw)*.5;
+    float cone=smoothstep(.86,.985,fw)*smoothstep(52.,5.,dl)*step(0.,fw)*glare;
+    float cone2=smoothstep(.55,.95,fw)*smoothstep(20.,3.,dl)*step(0.,fw)*.5*glare;
     vec3 L=vec3(.045,.05,.09)+vec3(1.,.88,.68)*(cone*3.2+cone2*.7);
     L+=vec3(1.,.12,.5)*exp(-dl*dl/(2.*2.8*2.8))*.9;
     float bk=smoothstep(.88,1.,-fw)*smoothstep(12.,1.5,dl);L+=vec3(1.,.04,.08)*bk*(.5+brake*1.6);
@@ -157,7 +157,7 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
  else{road=new THREE.Mesh(roadGeo,new THREE.ShaderMaterial({uniforms:THREE.UniformsUtils.clone(roadShader.uniforms),vertexShader:roadShader.vertexShader,fragmentShader:roadShader.fragmentShader}));
   const bt=new THREE.DataTexture(new Uint8Array([8,6,16,255]),1,1);bt.needsUpdate=true;road.material.uniforms.tDiffuse.value=bt;road.material.uniforms.textureMatrix.value=new THREE.Matrix4();road.material.uniforms.color.value=new THREE.Color(1,1,1)}
  const RU=road.material.uniforms;
- Object.assign(RU,{tAsph:{value:asphT},tNoise:{value:noiseT},time:{value:0},carPos:{value:new THREE.Vector3()},carDir:{value:new THREE.Vector2(0,1)},fogCol:{value:FOGC},fogD:{value:FOGD},blurK:{value:1},brake:{value:0}});
+ Object.assign(RU,{tAsph:{value:asphT},tNoise:{value:noiseT},time:{value:0},carPos:{value:new THREE.Vector3()},carDir:{value:new THREE.Vector2(0,1)},fogCol:{value:FOGC},fogD:{value:FOGD},blurK:{value:1},brake:{value:0},glare:{value:cfg.glare===false?0:1}});
  road.material.fog=false;
  road.rotation.x=-Math.PI/2;road.position.set(W/2,0,W/2);scene.add(road);
 
@@ -311,11 +311,11 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
  /* ---------- player car ---------- */
  const car=new THREE.Group();scene.add(car);
  const carBody=new THREE.Group();car.add(carBody);
- const paintCol=new THREE.Color({lambo:0xff7a1a,pagani:0x181820,starter:0x9db4c8,m4:0xf2f4f8,truck:0x2a6cff}[CARID]||0xd4104f);
+ const paintCol=new THREE.Color({lambo:0xff7a1a,pagani:0x181820,starter:0x2f6fd0,m4:0xf2f4f8,truck:0x2a6cff}[CARID]||0xd4104f);
  const wheels=[],fronts=[];let glbOK=false,bodyMat=null;
  const mkPaint=(c)=>new THREE.MeshPhysicalMaterial({color:c,metalness:.9,roughness:.32,clearcoat:1,clearcoatRoughness:.03,envMapIntensity:2.0});
  try{
-  if(!X.GLTFLoader||!X.DRACOLoader||CARID==='starter'||CARID==='m4'||CARID==='truck')throw new Error('no loader');
+  if(!X.GLTFLoader||!X.DRACOLoader||CARID==='truck')throw new Error('no loader');
   const dl=new X.DRACOLoader();dl.setDecoderPath(DRACO);const gl=new X.GLTFLoader();gl.setDRACOLoader(dl);
   const gltf=await Promise.race([gl.loadAsync(GLB),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),30000))]);
   const m=gltf.scene;
@@ -499,7 +499,7 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
   const fov=60+sp1*20+(I.drift?3:0);if(Math.abs(cam.fov-fov)>.2){cam.fov+=(fov-cam.fov)*Math.min(1,dt*3);cam.updateProjectionMatrix()}
   hudCoins();const sp=Math.round(S.sp*2.4);if(sp!==ss){ss=sp;el.s.textContent=sp}
   // shader state
-  RU.time.value=S.t;RU.carPos.value.set(S.x,0,S.z);RU.carDir.value.set(Math.sin(car.rotation.y),Math.cos(car.rotation.y));RU.brake.value+=((I.brake?1:0)-RU.brake.value)*Math.min(1,dt*10);
+  RU.time.value=S.t;RU.carPos.value.set(S.x,0,S.z);RU.carDir.value.set(Math.sin(car.rotation.y),Math.cos(car.rotation.y));RU.glare.value=cfg.glare===false?0:1;RU.brake.value+=((I.brake?1:0)-RU.brake.value)*Math.min(1,dt*10);
   rainU.time.value=S.t;rainU.cam.value.copy(cam.position);rainU.vel.value.set(-S.vx,0,-S.vz);
   if(post){post.uniforms.time.value=S.t%10;post.uniforms.speed.value=sp1*(I.drift?1.25:1);post.uniforms.amt.value=sp1*.6}
   if(scene.userData.red)scene.userData.red.opacity=.35+.65*(Math.sin(S.t*3)>.2?1:0);
