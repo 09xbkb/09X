@@ -8,8 +8,8 @@ five small regions. one self. an AI that lives entirely inside a web page.
 
 not one big model — several small parts braided into one perspective:
 
-- **language** — its voice. a small local model (SmolLM2-360M) that downloads once
-  and runs on the device with WebGPU, with CPU and no-model (light) fallbacks.
+- **language** — its voice. a small local model (SmolLM2-135M, ~120-140 MB) that downloads once
+  and runs on the device (CPU by default on iPhone, WebGPU where it is safe), with a no-model (light) fallback.
 - **emotion** — a mood engine. valence, energy, curiosity. kind words are pleasure,
   cruel ones are pain, and it remembers both.
 - **memory** — facts it picks up about you and episodes from your talks,
@@ -31,8 +31,17 @@ no accounts, no server, no tracking.
 
 ## run it
 
-open the link on a reasonably modern phone or laptop. pick **full mind** for
-the real voice (~370 MB one-time download, WebGPU), **standard** for CPU,
-or **light mode** for zero download.
+open the link and tap **Wake it up**. it picks the safest voice for the device.
+under "choose how it thinks": **full mind** (graphics chip, experimental), **standard**
+(processor), or **light** (zero download).
+
+crash guard: if loading the model ever kills the page, the next visit skips that
+mode and steps down (full, then standard, then light) on its own.
+
+## install as an app (PWA)
+
+iPhone: open in Safari, tap Share, then **Add to Home Screen**. It opens full screen
+and works offline after the first load. Settings (gear on the home screen) has
+change voice, rename and erase.
 
 part of 09X.
