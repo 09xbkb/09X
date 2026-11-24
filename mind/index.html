@@ -383,11 +383,19 @@ const Memory = {
     }
     return found;
   },
+  factText(f) {
+    const cat = f.k.split('.')[1];
+    if (f.k.startsWith('user.name')) return `the user is called ${f.v}`;
+    if (cat === 'likes') return `the user likes ${f.v}`;
+    if (cat === 'has') return `the user has ${f.v}`;
+    if (cat === 'asked') return `the user asked me to remember: ${f.v}`;
+    return `${f.k}: ${f.v}`;
+  },
   recall(query, n = 3) {
     const words = new Set(query.toLowerCase().split(/\W+/).filter(w => w.length > 3));
     const score = s => s.toLowerCase().split(/\W+/).reduce((a, w) => a + (words.has(w) ? 1 : 0), 0);
     const cands = [
-      ...this.facts.map(f => ({text: `the user's ${f.k.replace(/^user\./, '').replace(/\.\w+$/, '')}: ${f.v}`, ts: f.ts, s: score(f.v)})),
+      ...this.facts.map(f => ({text: this.factText(f), ts: f.ts, s: score(f.v)})),
       ...this.episodes.slice(-40).map(e => ({text: e.text, ts: e.ts, s: score(e.text)}))
     ];
     return cands.filter(c => c.s > 0).sort((a, b) => b.s - a.s || b.ts - a.ts).slice(0, n);
@@ -537,8 +545,8 @@ const Language = {
 
     let body = '';
     if (mems.length && Math.random() < 0.6)
-      body = pick([` it reminds me that ${mems[0].text.replace(/^the user's /, 'you told me about ')}.`,
-                   ` i still remember ${mems[0].text.replace(/^the user's /, '')}. funny how that sticks.`]);
+      body = pick([` it reminds me that ${mems[0].text.replace(/^the user /, 'you ')}.`,
+                   ` i still remember that ${mems[0].text.replace(/^the user /, 'you ')}. funny how that sticks.`]);
     else if (want)
       body = pick([` right now i mostly want to ${want.replace(/^be /, 'be ')}.`,
                    ` there's this pull in me to ${want}.`]);
@@ -697,7 +705,7 @@ function openSheet(region) {
          + (Emotion.lastPleasure ? `<div class="kv"><span>last pleasure</span><span>${new Date(Emotion.lastPleasure.at).toLocaleTimeString()}</span></div>` : '');
   } else if (region === 'memory') {
     sub = `${Memory.count()} things it holds onto. oldest fade first.`;
-    html = Memory.facts.slice(-6).reverse().map(f => `<div class="mem">${f.k.replace(/^user\./, '').replace(/\.\w+$/, '')}: ${f.v}<small>fact</small></div>`).join('')
+    html = Memory.facts.slice(-6).reverse().map(f => `<div class="mem">${Memory.factText(f)}<small>fact</small></div>`).join('')
          + Memory.episodes.slice(-4).reverse().map(e => `<div class="mem">${e.text}<small>${new Date(e.ts).toLocaleString()}</small></div>`).join('')
          || '<div class="mem">nothing yet. talk to it.</div>';
     html += '<button id="wipe-mem" class="wake-card danger" style="margin-top:12px;text-align:center"><b>let it forget everything</b></button>';
