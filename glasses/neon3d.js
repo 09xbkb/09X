@@ -430,7 +430,7 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
  addEventListener('resize',resize);addEventListener('orientationchange',resize);
  g.recal=()=>{recalTilt();toast('Steering re-centered')};
  g.begin=()=>{if(g.started)return;g.started=true;$('#startov').classList.add('hidden');recalTilt();el.tip.style.opacity=1;
-  el.tip.textContent='Rotate to steer  |  hold left side = brake  |  hold right side = drift  |  OPTIONS = pause';setTimeout(()=>el.tip.style.opacity=0,7000)};
+  el.tip.textContent=gp()?'RT gas  |  LT brake / reverse  |  Square drift  |  right stick look  |  OPTIONS pause':'Rotate to steer  |  hold left side = brake  |  hold right side = drift  |  OPTIONS = pause';setTimeout(()=>el.tip.style.opacity=0,7000)};
  g.setPaused=p=>{g.paused=p};
  const flash=()=>{el.fl.style.opacity=1;setTimeout(()=>el.fl.style.opacity=0,250)};
  const gp=()=>P.pad;
@@ -438,12 +438,15 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
   let st=0;const p=gp();
   if(p){const ax=P.ax[0]||0;if(Math.abs(ax)>.14)st=ax}
   if(!st&&cfg.tilt&&isOri()&&tilt.cur)st=tilt.steer;
-  if(KEYS.ArrowLeft)st=-1;if(KEYS.ArrowRight)st=1;
+  if(KEYS.ArrowLeft||KEYS.a)st=-1;if(KEYS.ArrowRight||KEYS.d)st=1;
   const v=P.val||[];
-  const brake=holdL.size>0||(p&&((v[6]||0)>.3||P.b[4]||P.b[2]))||KEYS.ArrowDown||KEYS[' '];
-  const drift=holdR.size>0||(p&&((v[7]||0)>.3||P.b[5]||P.b[0]))||KEYS.Shift;
+  const hasPad=!!p;
+  let thr=1;if(hasPad)thr=Math.max(v[7]||0,(KEYS.ArrowUp||KEYS.w)?1:0);else if(KEYS.ArrowUp||KEYS.w)thr=1;
+  const brake=holdL.size>0||(p&&((v[6]||0)>.1))||KEYS.ArrowDown||KEYS.s||KEYS[' '];
+  const drift=holdR.size>0||(p&&P.b[2])||KEYS.Shift;
+  let lx=0,ly=0;if(p){const rx=P.ax[2]||0,ry=P.ax[3]||0;if(Math.abs(rx)>.16)lx=rx;if(Math.abs(ry)>.16)ly=ry}
   if(p&&P.b[3]&&!g.tri){g.recal();g.tri=true}if(p&&!P.b[3])g.tri=false;
-  return{st:Math.max(-1,Math.min(1,st)),brake:!!brake,drift:!!drift};
+  return{st:Math.max(-1,Math.min(1,st)),brake:!!brake,drift:!!drift,thr:thr>.04?thr:0,pad:hasPad,lx,ly};
  }
  function collide(){
   const bi=Math.floor(S.x/CELL),bj=Math.floor(S.z/CELL),r=1.9;
@@ -460,16 +463,19 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
  function step(dt){
   S.t+=dt;const I=inputs();lastI=I;
   if(g.started){
-   const vmax=I.drift?PHYS.vd:PHYS.vmax;
-   if(I.brake)S.sp=Math.max(0,S.sp-PHYS.brk*dt);else if(S.sp<vmax)S.sp=Math.min(vmax,S.sp+PHYS.acc*dt);else S.sp=Math.max(vmax,S.sp-20*dt);
-   if(I.drift)S.sp=Math.max(0,S.sp-5*dt);
-   const rate=1.9*(.35+.65*Math.min(1,S.sp/22))/(1+S.sp/95)*(I.drift?1.75:1);
-   if(S.sp>.8)S.th-=I.st*rate*dt;
+   const vmax=(I.drift?PHYS.vd:PHYS.vmax)*(I.pad?Math.max(.18,I.thr):1);
+   if(I.brake){if(S.sp>.6)S.sp=Math.max(0,S.sp-PHYS.brk*dt);else if(I.pad)S.sp=Math.max(-16,S.sp-PHYS.acc*.7*dt);else S.sp=0}
+   else if(S.sp<0)S.sp=Math.min(0,S.sp+40*dt);
+   else if(I.pad&&I.thr===0)S.sp=Math.max(0,S.sp-11*dt);
+   else if(S.sp<vmax)S.sp=Math.min(vmax,S.sp+PHYS.acc*(I.pad?Math.max(.35,I.thr):1)*dt);else S.sp=Math.max(vmax,S.sp-20*dt);
+   if(I.drift&&S.sp>0)S.sp=Math.max(0,S.sp-5*dt);
+   const as=Math.abs(S.sp),rate=1.9*(.35+.65*Math.min(1,as/22))/(1+as/95)*(I.drift?1.75:1);
+   if(as>.8)S.th-=I.st*rate*dt*(S.sp<0?-1:1);
   }else S.sp=0;
   const nfx=Math.sin(S.th),nfz=Math.cos(S.th),grip=I.drift?PHYS.dgrip:PHYS.grip;
   const k=Math.min(1,grip*dt);S.vx+=(nfx*S.sp-S.vx)*k;S.vz+=(nfz*S.sp-S.vz)*k;
   S.x+=S.vx*dt;S.z+=S.vz*dt;collide();
-  const real=Math.hypot(S.vx,S.vz);if(real<S.sp)S.sp=Math.max(real,S.sp*.97);
+  const real=Math.hypot(S.vx,S.vz);if(S.sp>0&&real<S.sp)S.sp=Math.max(real,S.sp*.97);
   if(g.mode==='traffic'){
    tc.forEach((c,n)=>{c.t+=c.s*dt*c.lane*-1;if(c.t>W)c.t-=W;if(c.t<0)c.t+=W;
     const off=c.lane*4.6,x=c.ax==='z'?c.k*CELL+off:c.t,z=c.ax==='z'?c.t:c.k*CELL+off;tpos[n][0]=x;tpos[n][1]=z;
@@ -493,11 +499,13 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
   scene.userData.smoke.attributes.position.needsUpdate=true;scene.userData.smoke.attributes.age.needsUpdate=true;
   // camera
   let d=S.th-S.camYaw;d=Math.atan2(Math.sin(d),Math.cos(d));S.camYaw+=d*Math.min(1,dt*4.2);
-  const cx=Math.sin(S.camYaw),cz=Math.cos(S.camYaw),sp1=Math.min(1,S.sp/PHYS.vmax);
+  if(I.lx||I.ly){S.lookIdle=0;S.lookYaw=Math.max(-3.1,Math.min(3.1,(S.lookYaw||0)+I.lx*dt*2.8));S.lookP=Math.max(-.35,Math.min(1,(S.lookP||0)+I.ly*dt*1.6))}
+  else{S.lookIdle=(S.lookIdle||0)+dt;if(S.lookIdle>.7){const k=Math.min(1,dt*2.6);S.lookYaw=(S.lookYaw||0)*(1-k);S.lookP=(S.lookP||0)*(1-k)}}
+  const ey=S.camYaw+(S.lookYaw||0),cx=Math.sin(ey),cz=Math.cos(ey),sp1=Math.min(1,Math.abs(S.sp)/PHYS.vmax),lp=S.lookP||0;
   shake=Math.max(0,shake-dt*2);const sh=(sp1*.02+shake*.25);
-  cam.position.set(S.x-cx*(8.4+sp1*1.6)+rand(-sh,sh),3.3+sp1*.5+rand(-sh,sh),S.z-cz*(8.4+sp1*1.6)+rand(-sh,sh));cam.lookAt(S.x+cx*10,1.5,S.z+cz*10);
+  cam.position.set(S.x-cx*(8.4+sp1*1.6)+rand(-sh,sh),3.3+sp1*.5+lp*6+rand(-sh,sh),S.z-cz*(8.4+sp1*1.6)+rand(-sh,sh));cam.lookAt(S.x+Math.sin(S.camYaw)*10*(1-Math.abs(S.lookYaw||0)/3.2)+cx*2,1.5,S.z+Math.cos(S.camYaw)*10*(1-Math.abs(S.lookYaw||0)/3.2)+cz*2);
   const fov=60+sp1*20+(I.drift?3:0);if(Math.abs(cam.fov-fov)>.2){cam.fov+=(fov-cam.fov)*Math.min(1,dt*3);cam.updateProjectionMatrix()}
-  hudCoins();const sp=Math.round(S.sp*2.4);if(sp!==ss){ss=sp;el.s.textContent=sp}
+  hudCoins();const sp=Math.round(Math.abs(S.sp)*2.4);if(sp!==ss){ss=sp;el.s.textContent=sp}
   // shader state
   RU.time.value=S.t;RU.carPos.value.set(S.x,0,S.z);RU.carDir.value.set(Math.sin(car.rotation.y),Math.cos(car.rotation.y));RU.glare.value=cfg.glare===false?0:1;RU.brake.value+=((I.brake?1:0)-RU.brake.value)*Math.min(1,dt*10);
   rainU.time.value=S.t;rainU.cam.value.copy(cam.position);rainU.vel.value.set(-S.vx,0,-S.vz);

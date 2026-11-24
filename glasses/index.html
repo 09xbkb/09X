@@ -356,13 +356,13 @@ function buildSettings(){
  l.appendChild(glassItem('Glasses Display',()=>cfg.disp,dir=>{let i=(DISPS.indexOf(cfg.disp)+dir+3)%3;cfg.disp=DISPS[i];save()},true));
  l.appendChild(glassItem('Brightness',()=>cfg.bri+'%',dir=>{let i=(BRIS.indexOf(cfg.bri)+dir+BRIS.length)%BRIS.length;cfg.bri=BRIS[i];save();applyBri()},true));
  l.appendChild(glassItem('Wi-Fi',()=>navigator.onLine?'HomeNet':'Offline',()=>toast('Wi-Fi is managed by your phone.')));
- l.appendChild(glassItem('Controller',()=>(window.P&&P.pad)?'Connected':'Not connected',()=>show('controller')));
+ l.appendChild(glassItem('Controller',()=>P.pad?'Connected':'Not connected',()=>show('controller')));
  l.appendChild(glassItem('Motion Calibration',()=>'calibrate',()=>{recalTilt();toast('Motion calibrated.')}));
  l.appendChild(glassItem('Phone Pairing',()=>'paired',()=>toast('Keep your phone near the glasses to stay paired.')));
  const st=glassItem('Storage',()=>st._v||'checking',()=>{});st._v='checking';
  if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(e=>{const free=Math.max(0,Math.round((e.quota-e.usage)/1e9*10)/10);st._v=free+' GB free';st._adj(0)}).catch(()=>{st._v='-'});
  l.appendChild(st);
- l.appendChild(glassItem('About 09X Glass',()=>'v4',()=>toast('09X GLASS v4 - Neon City Drive inside.')));
+ l.appendChild(glassItem('About 09X Glass',()=>'v8',()=>toast('09X GLASS v8 - Neon City Drive inside.')));
  const c=document.createElement('div');c.className='item';c.dataset.f='';c.innerHTML='<span>Reset saved coins and gems</span><span class="v">reset</span>';c.onclick=()=>{store.set('coins',0);store.set('gems',0);toast('Reset.')};l.appendChild(c);
  const b=document.createElement('div');b.className='item';b.dataset.f='';b.innerHTML='<span>Back to home</span>';b.onclick=()=>show('home');l.appendChild(b);
 }
@@ -597,7 +597,7 @@ async function launch(id,mode){
   const THREE=await getThree();
   const FX=cfg.low?null:await getFX();game=await createNeon(THREE,$('#gameHost'),mode,FX,{car:carSt.sel,map:mapSt.sel});
   $('#loading').classList.add('hidden');$('#startov').classList.remove('hidden');
-  $('#startTilt').textContent=cfg.tilt?'Rotate the phone like a steering wheel, or use the left stick.':'Use the left stick to steer (rotate-to-steer is off in Settings).';
+  $('#startTilt').textContent=P.pad?'Controller: right trigger gas, left trigger brake, Square drift, right stick look around.':(cfg.tilt?'Rotate the phone like a steering wheel. The car drives itself; connect a controller for full control.':'Connect a controller to drive (rotate-to-steer is off in Settings).');
  }catch(err){
   console.error(err);$('#loading').textContent='COULD NOT LOAD. CHECK CONNECTION.';
   setTimeout(()=>{quitGame();show('home')},2500);
@@ -613,7 +613,7 @@ $('#startov').addEventListener('pointerdown',e=>{if(game&&!game.started){enableT
 
 /* ---------- Neon City Drive ---------- */
 let exP=null;const getExtra=()=>exP||(exP=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/DRACOLoader.js'),import('three/addons/postprocessing/ShaderPass.js'),import('three/addons/objects/Reflector.js')].map(p=>p.catch(e=>{console.warn('extra off',e);return null}))).then(m=>({GLTFLoader:m[0]&&m[0].GLTFLoader,DRACOLoader:m[1]&&m[1].DRACOLoader,ShaderPass:m[2]&&m[2].ShaderPass,Reflector:m[3]&&m[3].Reflector})));
-async function createNeon(THREE,host,mode0,FX){const X=await getExtra();const m=await import('./neon3d.js?v=7');return m.createNeon(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:arguments[4]||{}})}
+async function createNeon(THREE,host,mode0,FX){const X=await getExtra();const m=await import('./neon3d.js?v=8');return m.createNeon(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:arguments[4]||{}})}
 
 /* ---------- boot ---------- */
 function mainLoop(now){requestAnimationFrame(mainLoop);pollPad(now)}
