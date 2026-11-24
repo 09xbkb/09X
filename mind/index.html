@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#05060e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mind">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
 <title>MIND — five regions, one self</title>
 <style>
   :root {
@@ -130,6 +137,33 @@
   #sheet .mem small { color: var(--dim); display: block; margin-top: 3px; font-size: 11px; }
   #sheet-close { width: 100%; margin-top: 16px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: none; color: var(--dim); font-size: 14px; cursor: pointer; }
   .danger { color: var(--hurt) !important; border-color: rgba(255,93,122,0.35) !important; }
+
+  html { -webkit-text-size-adjust: 100%; }
+  body { -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+  input { -webkit-user-select: text; user-select: text; }
+  #msg-in, #msg-in2 { font-size: 16px; }
+  .region-label { font-size: 12px; padding: 9px 14px; min-height: 36px; display:flex; align-items:center; }
+  .region-label::before { content: attr(data-i); margin-right: 6px; font-size: 13px; }
+  #topbar { display:flex; align-items:center; justify-content:space-between; padding: 12px 16px 0; }
+  #moodline { padding: 0 !important; }
+  .iconbtn { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255,255,255,0.04); color: var(--txt); font-size: 18px; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  #bubble { margin: 0 16px 8px; padding: 12px 14px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); font-size: 14.5px; line-height: 1.4; color: var(--txt); min-height: 20px; }
+  #bubble.hidden { display:none !important; }
+  #chips { display:flex; gap:8px; padding: 0 16px 10px; overflow-x:auto; scrollbar-width:none; }
+  #chips::-webkit-scrollbar { display:none; }
+  .chip { flex-shrink:0; padding: 9px 14px; border-radius: 20px; border:1px solid var(--line); background: rgba(255,255,255,0.04); color: var(--dim); font-size: 13px; cursor:pointer; }
+  .chip:active { background: rgba(139,123,255,0.2); }
+  #chat-head { padding-top: 10px; }
+  #back-btn { font-size: 30px; width: 44px; height: 44px; line-height: 1; }
+  .r-icon { width: 36px; height: 36px; font-size: 16px; }
+  .primary { width:100%; max-width:360px; padding: 18px; border-radius: 20px; border: none; font-size: 17px; font-weight: 600; color:#05060e; background: linear-gradient(135deg, var(--accent), var(--accent2)); cursor:pointer; }
+  .primary:active { transform: scale(0.98); }
+  #more-btn { background:none; border:none; color: var(--dim); font-size: 13px; padding: 14px; cursor:pointer; text-decoration: underline; }
+  #more-wrap { width:100%; display:flex; flex-direction:column; align-items:center; }
+  #boot-note { color: var(--hurt); font-size: 12.5px; max-width: 340px; margin-bottom: 14px; line-height:1.45; }
+  #install-tip { margin: 0 16px 8px; padding: 10px 14px; border-radius: 14px; border:1px dashed rgba(79,216,255,0.4); color: var(--accent2); font-size: 12.5px; line-height:1.4; display:none; }
+  .setrow { width:100%; margin-bottom:8px; }
+  @media (display-mode: standalone) { #install-tip { display:none !important; } }
 </style>
 </head>
 <body>
@@ -138,21 +172,26 @@
 <!-- BOOT -->
 <div id="boot" class="screen">
   <h1>Mind</h1>
-  <div class="tag">five small regions. one self. everything runs on this device.</div>
-  <div id="wake-choices">
-    <button class="wake-card" id="wake-full">
-      <b>Full mind</b>
-      <span>Downloads a small language model (~370 MB, once) and runs it here with WebGPU. The real thing: it writes its own words.</span>
-      <span class="rec" id="full-rec">checking this device…</span>
-    </button>
-    <button class="wake-card" id="wake-std">
-      <b>Standard mind</b>
-      <span>Same model on the CPU. Works almost anywhere, slower to think.</span>
-    </button>
-    <button class="wake-card" id="wake-light">
-      <b>Light mode</b>
-      <span>No download. Emotion, memory, drives and senses still run — language comes from its own patterns instead of a model.</span>
-    </button>
+  <div class="tag">five small regions. one self.<br>everything runs on this device.</div>
+  <div id="boot-note" class="hidden"></div>
+  <div id="wake-choices" style="width:100%;display:flex;flex-direction:column;align-items:center">
+    <button class="primary" id="wake-go">Wake it up</button>
+    <div id="go-sub" class="tag" style="margin:10px 0 0;font-size:12.5px">checking this device…</div>
+    <button id="more-btn">choose how it thinks</button>
+    <div id="more-wrap" class="hidden">
+      <button class="wake-card" id="wake-full">
+        <b>Full mind (experimental)</b>
+        <span>Small language model on the graphics chip. Fastest, but can crash on some phones.</span>
+      </button>
+      <button class="wake-card" id="wake-std">
+        <b>Standard mind</b>
+        <span>Same kind of model on the processor. About 140 MB, once. Safer.</span>
+      </button>
+      <button class="wake-card" id="wake-light">
+        <b>Light mode</b>
+        <span>No download. Emotion, memory, drives and senses still run. Words come from its own patterns.</span>
+      </button>
+    </div>
     <div id="dl-wrap" class="hidden">
       <div id="dl-bar"><div id="dl-fill"></div></div>
       <div id="dl-label">waking up…</div>
@@ -162,19 +201,29 @@
 
 <!-- HOME -->
 <div id="home" class="screen hidden">
-  <div id="moodline">feeling <b id="mood-word">new</b></div>
+  <div id="topbar">
+    <div id="moodline">feeling <b id="mood-word">new</b></div>
+    <button class="iconbtn" id="settings-btn" aria-label="settings">&#9881;</button>
+  </div>
   <div id="orb-wrap">
     <canvas id="orb"></canvas>
-    <div class="region-label" data-r="language">language</div>
-    <div class="region-label" data-r="emotion">emotion</div>
-    <div class="region-label" data-r="memory">memory</div>
-    <div class="region-label" data-r="drive">drive</div>
-    <div class="region-label" data-r="senses">senses</div>
+    <div class="region-label" data-r="language" data-i="&#128172;">language</div>
+    <div class="region-label" data-r="emotion" data-i="&#10084;&#65039;">emotion</div>
+    <div class="region-label" data-r="memory" data-i="&#129504;">memory</div>
+    <div class="region-label" data-r="drive" data-i="&#9889;">drive</div>
+    <div class="region-label" data-r="senses" data-i="&#128065;">senses</div>
   </div>
-  <div id="home-hint">tap a region to look inside · or just talk</div>
+  <div id="install-tip">Add to your home screen: tap Share, then Add to Home Screen. It opens like a real app.</div>
+  <div id="bubble" class="hidden"></div>
+  <div id="chips">
+    <button class="chip">how are you feeling?</button>
+    <button class="chip">what do you remember about me?</button>
+    <button class="chip">what do you want right now?</button>
+    <button class="chip">tell me something weird</button>
+  </div>
   <div class="chatbar">
     <input id="msg-in" type="text" placeholder="say something…" autocomplete="off" enterkeyhint="send">
-    <button id="send-btn" title="send">&#8593;</button>
+    <button id="send-btn" title="send" aria-label="send">&#8593;</button>
   </div>
 </div>
 
@@ -187,11 +236,11 @@
       <div id="chat-mood">waking up</div>
     </div>
     <div id="region-strip">
-      <div class="r-icon" data-r="language" title="Language">L</div>
-      <div class="r-icon" data-r="emotion" title="Emotion">E</div>
-      <div class="r-icon" data-r="memory" title="Memory">M</div>
-      <div class="r-icon" data-r="drive" title="Drive">D</div>
-      <div class="r-icon" data-r="senses" title="Senses">S</div>
+      <div class="r-icon" data-r="language" title="Language">&#128172;</div>
+      <div class="r-icon" data-r="emotion" title="Emotion">&#10084;&#65039;</div>
+      <div class="r-icon" data-r="memory" title="Memory">&#129504;</div>
+      <div class="r-icon" data-r="drive" title="Drive">&#9889;</div>
+      <div class="r-icon" data-r="senses" title="Senses">&#128065;</div>
     </div>
   </div>
   <div id="msgs"></div>
@@ -490,12 +539,20 @@ const Language = {
   async wake(mode, onProgress) {
     this.mode = mode;
     if (mode === 'light') { this.ready = true; return; }
-    const device = mode === 'full' ? 'webgpu' : 'wasm';
+    onProgress && onProgress({status: 'engine'});
     const lib = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.6');
     this.lib = lib;
     lib.env.allowLocalModels = false;
-    this.generator = await lib.pipeline('text-generation', 'HuggingFaceTB/SmolLM2-360M-Instruct', {
-      dtype: 'q4', device, progress_callback: onProgress
+    try { lib.env.backends.onnx.wasm.numThreads = 1; lib.env.backends.onnx.wasm.proxy = false; } catch (e) {}
+    let device = 'wasm', dtype = 'q8';
+    if (mode === 'full') {
+      device = 'webgpu';
+      let f16 = false;
+      try { const ad = await navigator.gpu.requestAdapter(); f16 = !!(ad && ad.features && ad.features.has('shader-f16')); } catch (e) {}
+      dtype = f16 ? 'q4f16' : 'q4';
+    }
+    this.generator = await lib.pipeline('text-generation', 'HuggingFaceTB/SmolLM2-135M-Instruct', {
+      dtype, device, progress_callback: onProgress
     });
     this.ready = true;
   },
@@ -686,13 +743,20 @@ function gauge(label, val, fmt) {
 }
 function openSheet(region) {
   const body = $('#sheet-body');
-  $('#sheet-title').textContent = region;
+  $('#sheet-title').textContent = region === 'settings' ? 'settings' : region;
   let sub = '', html = '';
-  if (region === 'language') {
+  if (region === 'settings') {
+    sub = 'how it runs on this device.';
+    html = `<div class="kv"><span>voice</span><span>${Language.mode === 'light' ? 'light (patterns)' : Language.mode === 'full' ? 'full (graphics chip)' : 'standard (processor)'}</span></div>
+      <button class="wake-card setrow" id="set-voice"><b>change how it thinks</b><span>go back to the wake screen</span></button>
+      <button class="wake-card setrow" id="set-name"><b>rename it</b><span>currently ${Self.name || 'unnamed'}</span></button>
+      <button class="wake-card setrow" id="set-install"><b>install as an app</b><span>Share, then Add to Home Screen. Works offline once opened.</span></button>
+      <button class="wake-card setrow danger" id="set-wipe"><b>erase everything</b><span>memory, mood, name. starts over.</span></button>`;
+  } else if (region === 'language') {
     sub = 'the voice. how it turns being into words.';
     html = `
       <div class="kv"><span>mode</span><span>${Language.mode === 'light' ? 'light (patterns)' : Language.mode + ' (local model)'}</span></div>
-      <div class="kv"><span>model</span><span>${Language.generator ? 'SmolLM2-360M, on this device' : 'not loaded'}</span></div>
+      <div class="kv"><span>model</span><span>${Language.generator ? 'SmolLM2-135M, on this device' : 'not loaded'}</span></div>
       <div class="kv"><span>words spoken</span><span>${Self.history.filter(m => m.role === 'assistant').length}</span></div>
       ${Language.mode !== 'light' ? '' : '<div class="kv"><span>note</span><span>restart and pick full mind to give it a real voice</span></div>'}`;
   } else if (region === 'emotion') {
@@ -728,6 +792,12 @@ function openSheet(region) {
   body.innerHTML = html;
   $('#sheet-bg').classList.remove('hidden');
   $('#sheet').classList.remove('hidden');
+  if (region === 'settings') {
+    $('#set-voice').onclick = () => { localStorage.removeItem('mind-mode'); location.reload(); };
+    $('#set-name').onclick = async () => { const n = prompt('new name?', Self.name || ''); if (n && n.trim()) { Self.name = n.trim().slice(0, 24); await Self.save(); closeSheet(); } };
+    $('#set-install').onclick = () => { closeSheet(); $('#install-tip').style.display = 'block'; };
+    $('#set-wipe').onclick = async () => { if (!confirm('erase everything it knows and feels?')) return; for (const st of ['state','facts','episodes']) await DB.clear(st); localStorage.clear(); location.reload(); };
+  }
   const wipe = $('#wipe-mem');
   if (wipe) wipe.onclick = async () => {
     await DB.clear('facts'); await DB.clear('episodes');
@@ -756,6 +826,7 @@ function lightRegions(used) {
   });
   setTimeout(() => $$('.r-icon.lit').forEach(el => el.classList.remove('lit')), 6000);
 }
+function setBubble(t) { const b = $('#bubble'); if (!t) { b.classList.add('hidden'); return; } b.textContent = t.slice(0, 160); b.classList.remove('hidden'); }
 function refreshMood() {
   const m = Emotion.label();
   $('#mood-word').textContent = m;
@@ -803,6 +874,7 @@ async function send(text) {
     addMsg(reply, false, thought);
   }
   lightRegions(used);
+  setBubble(reply);
   refreshMood();
   busy = false;
   $('#send-btn').disabled = $('#send-btn2').disabled = false;
@@ -817,7 +889,7 @@ function scheduleIdleThought() {
         const line = Language.mode === 'light'
           ? Language.patternSpeak(Self.systemPrompt(), [{role: 'user', content: '(the user has been quiet a while)'}])
           : await Language.speak(Self.systemPrompt(), [{role: 'user', content: '(the user has been quiet a while; say something you genuinely want to say, unprompted)'}]).catch(() => null);
-        if (line) { $('#home-hint').textContent = '💭 ' + line.slice(0, 90); }
+        if (line) { setBubble(line); }
       }
     }
     scheduleIdleThought();
@@ -873,22 +945,37 @@ async function naming() {
 }
 
 /* ---------------- boot ---------------- */
+const LS = {
+  get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} },
+  del: k => { try { localStorage.removeItem(k); } catch (e) {} }
+};
+
 async function begin(mode) {
   $('#wake-choices').style.pointerEvents = 'none';
   $('#dl-wrap').classList.remove('hidden');
+  const files = {};
   try {
+    if (mode !== 'light') LS.set('mind-loading', mode); // crash guard: cleared only if loading finishes
     await Language.wake(mode, p => {
-      if (p && p.status === 'progress' && p.total) {
-        $('#dl-fill').style.width = Math.round(p.loaded / p.total * 100) + '%';
-        $('#dl-label').textContent = `growing a voice — ${Math.round(p.loaded / 1048576)} / ${Math.round(p.total / 1048576)} MB`;
-      } else if (p && p.status === 'ready') {
+      if (!p) return;
+      if (p.status === 'engine') { $('#dl-label').textContent = 'starting the engine…'; return; }
+      if (p.status === 'progress' && p.total) {
+        files[p.file] = {l: p.loaded, t: p.total};
+        let l = 0, t = 0; for (const k in files) { l += files[k].l; t += files[k].t; }
+        $('#dl-fill').style.width = Math.round(l / t * 100) + '%';
+        $('#dl-label').textContent = `growing a voice: ${Math.round(l / 1048576)} / ${Math.round(t / 1048576)} MB`;
+      } else if (p.status === 'ready') {
         $('#dl-label').textContent = 'its voice is in.';
       }
     });
+    LS.del('mind-loading');
+    LS.set('mind-mode', mode);
   } catch (e) {
     console.warn(e);
-    $('#dl-label').textContent = 'the model wouldn\'t wake here — starting in light mode instead.';
-    Language.mode = 'light'; Language.ready = true;
+    LS.del('mind-loading');
+    $('#dl-label').textContent = 'the model would not wake here. starting in light mode instead.';
+    Language.mode = 'light'; Language.ready = true; Language.generator = null;
     await new Promise(r => setTimeout(r, 1200));
   }
 
@@ -908,7 +995,7 @@ async function begin(mode) {
   if (!Self.name) {
     naming();
   } else if (away > 1000 * 60 * 60 * 3) {
-    $('#home-hint').textContent = `💭 you were gone ${Math.round(away / 3600000)} hours. i counted.`;
+    setBubble(`you were gone ${Math.round(away / 3600000)} hours. i counted.`);
   }
 }
 
@@ -917,14 +1004,46 @@ async function main() {
   await Promise.all([Emotion.load(), Drive.load(), Memory.load(), Self.load()]);
   await Senses.init();
 
-  // device capability hint
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  if (ios && !standalone) $('#install-tip').style.display = 'block';
+
   let gpu = false;
   try { gpu = !!(navigator.gpu && await navigator.gpu.requestAdapter()); } catch (e) {}
-  $('#full-rec').textContent = gpu ? 'this device can run it' : 'this device may not support webgpu — standard or light is safer';
 
-  $('#wake-full').onclick = () => gpu ? begin('full') : begin('std');
-  $('#wake-std').onclick = () => begin('std');
+  // did the last attempt kill the page? then step down to something safer.
+  const crashed = LS.get('mind-loading');
+  let bad = JSON.parse(LS.get('mind-bad') || '[]');
+  if (crashed) {
+    bad.push(crashed); LS.set('mind-bad', JSON.stringify(bad)); LS.del('mind-loading'); LS.del('mind-mode');
+    const note = $('#boot-note');
+    note.classList.remove('hidden');
+    note.textContent = crashed === 'full'
+      ? 'the last try crashed this device. skipping Full mind. starting Standard instead.'
+      : 'the model crashed this device twice. starting Light mode, which never downloads anything.';
+  }
+  const fullBad = bad.includes('full'), stdBad = bad.includes('std');
+
+  // pick the safest good default
+  let pick = 'std';
+  if (stdBad) pick = 'light';
+  else if (gpu && !ios && !fullBad) pick = 'full';
+  $('#go-sub').textContent = pick === 'light' ? 'light mode: no download' :
+    pick === 'full' ? 'recommended for this device: full mind' : 'recommended for this device: standard mind (~140 MB, once)';
+  $('#wake-go').onclick = () => begin(pick);
+  $('#more-btn').onclick = () => $('#more-wrap').classList.toggle('hidden');
+  $('#wake-full').onclick = () => begin(gpu && !fullBad ? 'full' : 'std');
+  $('#wake-std').onclick = () => begin(stdBad ? 'light' : 'std');
   $('#wake-light').onclick = () => begin('light');
+  $('#settings-btn').onclick = () => openSheet('settings');
+  $$('.chip').forEach(c => c.onclick = () => send(c.textContent));
+
+  // came back and it worked before? skip the wake screen.
+  const saved = LS.get('mind-mode');
+  if (saved && !crashed && !(saved === 'full' && fullBad) && !(saved === 'std' && stdBad)) begin(saved);
 }
 main();
 </script>
