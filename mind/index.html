@@ -285,6 +285,7 @@ const $$ = s => [...document.querySelectorAll(s)];
   }
   size(); addEventListener('resize', size);
   (function loop(t) {
+    if (window.__loading || document.hidden) { x.clearRect(0, 0, W, H); setTimeout(() => requestAnimationFrame(loop), 600); return; }
     x.clearRect(0, 0, W, H);
     for (const s of stars) {
       const a = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(t / 1000 * s.s + s.p));
@@ -952,6 +953,7 @@ const LS = {
 };
 
 async function begin(mode) {
+  window.__loading = true; // pause decorative canvases while the model loads
   $('#wake-choices').style.pointerEvents = 'none';
   $('#dl-wrap').classList.remove('hidden');
   const files = {};
@@ -979,6 +981,7 @@ async function begin(mode) {
     await new Promise(r => setTimeout(r, 1200));
   }
 
+  window.__loading = false;
   const now = Date.now();
   const away = Self.lastVisit ? now - Self.lastVisit : 0;
   Drive.tick(away, 0);
@@ -1028,14 +1031,16 @@ async function main() {
   const fullBad = bad.includes('full'), stdBad = bad.includes('std');
 
   // pick the safest good default
-  let pick = 'std';
+  // iPhones: Light by default, the model is opt-in. Other devices: Full only with a GPU.
+  let pick = ios ? 'light' : 'std';
   if (stdBad) pick = 'light';
-  else if (gpu && !ios && !fullBad) pick = 'full';
-  $('#go-sub').textContent = pick === 'light' ? 'light mode: no download' :
+  else if (!ios && gpu && !fullBad) pick = 'full';
+  if (ios) { const fc = $('#wake-full'); if (fc) fc.style.display = 'none'; }
+  $('#go-sub').textContent = pick === 'light' ? (ios ? 'light mode: no download, never crashes. want a language model? open "choose how it thinks"' : 'light mode: no download') :
     pick === 'full' ? 'recommended for this device: full mind' : 'recommended for this device: standard mind (~140 MB, once)';
   $('#wake-go').onclick = () => begin(pick);
   $('#more-btn').onclick = () => $('#more-wrap').classList.toggle('hidden');
-  $('#wake-full').onclick = () => begin(gpu && !fullBad ? 'full' : 'std');
+  $('#wake-full').onclick = () => begin(gpu && !fullBad && !ios ? 'full' : 'std');
   $('#wake-std').onclick = () => begin(stdBad ? 'light' : 'std');
   $('#wake-light').onclick = () => begin('light');
   $('#settings-btn').onclick = () => openSheet('settings');
@@ -1043,7 +1048,11 @@ async function main() {
 
   // came back and it worked before? skip the wake screen.
   const saved = LS.get('mind-mode');
-  if (saved && !crashed && !(saved === 'full' && fullBad) && !(saved === 'std' && stdBad)) begin(saved);
+  // revisit: never auto-load the model (that load is the memory peak). Start in Light; the model is opt-in via the gear > change voice.
+  if (saved && !crashed && !(saved === 'full' && fullBad) && !(saved === 'std' && stdBad)) {
+    await begin('light');
+    if (saved !== 'light') setBubble('i woke in light mode so i would not crash. gear, then change voice, to give me a model.');
+  }
 }
 main();
 </script>
