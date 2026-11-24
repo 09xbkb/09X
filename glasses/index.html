@@ -362,7 +362,7 @@ function buildSettings(){
  const st=glassItem('Storage',()=>st._v||'checking',()=>{});st._v='checking';
  if(navigator.storage&&navigator.storage.estimate)navigator.storage.estimate().then(e=>{const free=Math.max(0,Math.round((e.quota-e.usage)/1e9*10)/10);st._v=free+' GB free';st._adj(0)}).catch(()=>{st._v='-'});
  l.appendChild(st);
- l.appendChild(glassItem('About 09X Glass',()=>'v12',()=>toast('09X GLASS v12 - Neon City Drive inside.')));
+ l.appendChild(glassItem('About 09X Glass',()=>'v13',()=>toast('09X GLASS v13 - Neon City Drive inside.')));
  const c=document.createElement('div');c.className='item';c.dataset.f='';c.innerHTML='<span>Reset saved coins and gems</span><span class="v">reset</span>';c.onclick=()=>{store.set('coins',0);store.set('gems',0);toast('Reset.')};l.appendChild(c);
  const b=document.createElement('div');b.className='item';b.dataset.f='';b.innerHTML='<span>Back to home</span>';b.onclick=()=>show('home');l.appendChild(b);
 }
@@ -387,8 +387,8 @@ const mapById=id=>MAPS.find(m=>m.id===id)||MAPS[0];
 const carArt=id=>(window.A&&A['car_'+id])||A.neon;
 const mapArt=id=>(window.A&&A['map_'+id])||A.neon;
 function wallet(){$('#mCoins').textContent=store.get('coins',0);$('#mGems').textContent=store.get('gems',0)}
-import {CATS,CAT_ORDER} from './catalog.js?v=12';
-const READY={maps:{cars:['neon','desert','skyline'],trucks:['port','mountain','freeway','mud'],boats:['harbor','lagoon','storm','canyon'],planes:['skyline','canyonrun','clouds','storm'],helis:['rooftop','rigs','alpine','caves']},veh:{cars:1,trucks:1,boats:1,planes:1,helis:1}};
+import {CATS,CAT_ORDER} from './catalog.js?v=13';
+const READY={maps:{cars:['neon','desert','skyline','stunt'],trucks:['port','mountain','freeway','mud'],boats:['harbor','lagoon','storm','canyon'],planes:['skyline','canyonrun','clouds','storm'],helis:['rooftop','rigs','alpine','caves']},veh:{cars:1,trucks:1,boats:1,planes:1,helis:1}};
 let g2=store.get('g2',{});let curCat=store.get('cat','cars');if(!CATS[curCat])curCat='cars';
 const g2s=cat=>{if(!g2[cat]){const C=CATS[cat];g2[cat]={vo:[C.vehicles[0].id],vs:C.vehicles[0].id,mo:[C.maps[0].id],ms:C.maps[0].id}}return g2[cat]};
 const stOf=cat=>cat==='cars'?{vo:carSt.owned,vs:carSt.sel,mo:mapSt.owned,ms:mapSt.sel}:g2s(cat);
@@ -632,9 +632,9 @@ $('#startov').addEventListener('pointerdown',e=>{if(game&&!game.started){enableT
 let exP=null;const getExtra=()=>exP||(exP=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/DRACOLoader.js'),import('three/addons/postprocessing/ShaderPass.js'),import('three/addons/objects/Reflector.js')].map(p=>p.catch(e=>{console.warn('extra off',e);return null}))).then(m=>({GLTFLoader:m[0]&&m[0].GLTFLoader,DRACOLoader:m[1]&&m[1].DRACOLoader,ShaderPass:m[2]&&m[2].ShaderPass,Reflector:m[3]&&m[3].Reflector})));
 async function createGame(THREE,host,mode0,FX){
  const st=stOf(curCat);
- if(curCat==='cars')return createNeon(THREE,host,mode0,FX,{car:st.vs,map:st.ms});
- const X=await getExtra();const m=await import('./world.js?v=12');
- return m.createWorld(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:{cat:curCat,tier:CATS[curCat].vehicles.findIndex(v=>v.id===st.vs),map:st.ms}})}
+ if(curCat==='cars'&&st.ms==='neon')return createNeon(THREE,host,mode0,FX,{car:st.vs,map:st.ms});
+ const X=await getExtra();const m=await import('./world.js?v=13');
+ return m.createWorld(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:{cat:curCat,tier:Math.max(0,CATS[curCat].vehicles.findIndex(v=>v.id===st.vs)),map:st.ms}})}
 async function createNeon(THREE,host,mode0,FX){const X=await getExtra();const m=await import('./neon3d.js?v=10');return m.createNeon(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:arguments[4]||{}})}
 
 /* ---------- boot ---------- */

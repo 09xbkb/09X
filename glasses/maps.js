@@ -193,3 +193,40 @@ MAPS['helis:caves']=airMap({nm:'Canyon Caves',pal:'sunset',sun:true,spawn:[200,1
   for(let k=0;k<5;k++){const x=500+k*450,z=cz(x),y=W.ground(x,z)+30;const b=new T.Mesh(new T.BoxGeometry(3,.4,260),bm);b.position.set(x,y,z);W.scene.add(b);W.glowPts([[x,y+2,z-120,1],[x,y+2,z+120,1],[x,y+2,z,1]],0xffc83d,16,.9);
    W.addCol({x:x,z:z-100,r:1.5,top:y+3});W.addCol({x:x,z:z+100,r:1.5,top:y+3})}
   return{coinSpot:()=>{const x=W.rand(100,2500);return[x,cz(x)+W.rand(-90,90),W.ground(x,cz(x))+W.rand(12,45)]}}}});
+
+/* ===== CARS on the new engine (big maps with ramps) ===== */
+const carMap=(o)=>Object.assign({size:2400,cell:9,water:null,mmR:300,dust:false,roadBlend:10},o);
+const kick=(W,x,z,yaw,L=46,Wd=18,H=8,col)=>{const y=W.ground(x,z);W.addRamp(x,z,yaw,L,Wd,y,y+H,'ramp',{col:col||0xffa13d})};
+MAPS['cars:desert']=carMap({nm:'Desert Dusk XL',pal:'sunset',sun:true,spawn:[300,1200,Math.PI/2],dust:true,rough:1,
+ H:(x,z,n)=>{let h=n(x*.004,z*.004,4)*14;[[900,500,150],[1600,1500,200],[1200,1900,130],[1900,600,170]].forEach(m=>{const d=Math.hypot(x-m[0],z-m[1])/m[2];if(d<1.3)h+=sm(1.3,.8,d)*(55+m[2]*.2)});return h},
+ roads:[{pts:[[100,1200],[700,1250],[1200,1100],[1700,1200],[2300,1150]],w:20,glow:null},{pts:[[1200,100],[1250,700],[1200,1100],[1150,1700],[1200,2300]],w:20}],
+ col:(x,z,h,sl,n,r)=>sl>.5?mix(hex(0xb04a2a),hex(0x6a2a22),.5):mix(hex(0xd9a060),hex(0xb87a44),n(x*.05,z*.05)),
+ props:(W)=>{kick(W,500,1220,Math.PI/2,50,20,9);
+  // giant ramp
+  const gy=W.ground(1500,1190);W.addRamp(1500,1190,Math.PI/2,130,34,gy,gy+34,'ramp',{col:0xff3da8});
+  // arch bridge pillars
+  const T=W.T,rm=new T.MeshStandardMaterial({color:0xa8442a,roughness:.9,flatShading:true});boxes(W,[{x:1900,y:20,z:1100,w:16,h:44,d:16,c:0},{x:1900,y:20,z:1300,w:16,h:44,d:16,c:0}],rm);
+  boxes(W,[{x:1900,y:44,z:1200,w:16,h:10,d:230,c:0}],rm,0,false);
+  for(let k=0;k<20;k++){const x=W.rand(200,2200),z=W.rand(200,2200);const r=W.roadNear(x,z);if(r&&r.d<30)continue;kick(W,x,z,W.rng()*6.28,40,16,W.rand(5,9))}
+  return{}}});
+MAPS['cars:skyline']=carMap({nm:'Skyline Ring',pal:'dawn',spawn:[2000,1200,0],roadBlend:3,far:2000,
+ H:(x,z,n)=>-6+n(x*.01,z*.01)*3,
+ roads:[{pts:(()=>{const a=[];for(let i=0;i<28;i++){const t=i/28*Math.PI*2;a.push([1200+Math.cos(t)*(800+Math.sin(t*3)*100),1200+Math.sin(t)*(800+Math.cos(t*2)*100),14])}return a})(),w:30,closed:true,glow:[0xff3da8,0x35e6ff]}],
+ col:(x,z,h,sl)=>h>8?hex(0x2a2440):mix(hex(0xe8c0d8),hex(0xc89ac0),.5),
+ props:(W)=>{const r=W.roads[0];for(let i=0;i<r.pts.length;i+=4){const p=r.pts[i],q=r.pts[(i+1)%r.pts.length];W.addRamp(p[0],p[1],Math.atan2(q[0]-p[0],q[1]-p[1]),40,16,14,20,'ramp',{col:0x35e6ff})}
+  const T=W.T;const cl=[];for(let k=0;k<200;k++)cl.push({x:W.rand(0,2400),y:W.rand(-4,4),z:W.rand(0,2400),sx:W.rand(80,220),sy:W.rand(14,26),sz:W.rand(80,200)});W.inst(new T.SphereGeometry(1,10,8),new T.MeshBasicMaterial({color:0xffe0f0,transparent:true,opacity:.6,depthWrite:false}),cl);
+  W.roads.forEach(rr=>lamps(W,rr,3,0xffd9f0,8));
+  return{}}});
+MAPS['cars:stunt']=carMap({nm:'Turbo Stunt Park',pal:'night',size:1800,spawn:[900,200,0],mmR:260,
+ H:(x,z,n)=>n(x*.01,z*.01)*2,roads:[{pts:[[900,60],[900,900],[900,1740]],w:34,glow:[0xff3da8,0x35e6ff]},{pts:[[60,900],[900,900],[1740,900]],w:34,glow:[0x35e6ff,0xff3da8]}],
+ col:(x,z)=>hex(0x1a1632),
+ props:(W)=>{const g=(x,z)=>W.ground(x,z);
+  [[900,350,0],[900,1450,Math.PI],[300,900,-Math.PI/2],[1500,900,Math.PI/2]].forEach(([x,z,y])=>W.addRamp(x,z,y,60,26,g(x,z),g(x,z)+12,'ramp',{col:0xff3da8}));
+  // floating platforms with landing
+  [[900,700,22],[1300,1100,28],[500,1100,26],[900,1150,34]].forEach(([x,z,h])=>{W.addRamp(x,z,0,50,40,0,h,'box',{col:0x35e6ff});W.addRamp(x,z-70,0,70,26,g(x,z-70),h,'ramp',{col:0xffc83d})});
+  // halfpipes
+  [[300,400],[1400,400],[300,1450],[1400,1450]].forEach(([x,z])=>W.addRamp(x,z,0,140,40,0,0,'pipe',{depth:1.2,col:0xff3da8}));
+  // loop-the-loop look: neon ring (decor) at the middle crossing
+  const T=W.T;const lp=new T.Mesh(new T.TorusGeometry(30,1.6,12,60),new T.MeshBasicMaterial({color:0xff3da8,toneMapped:false}));lp.position.set(900,32,900);lp.rotation.y=Math.PI/2;W.scene.add(lp);
+  W.roads.forEach(rr=>lamps(W,rr,3,0xff9ad0,8));
+  return{}}});

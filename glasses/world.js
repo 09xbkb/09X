@@ -1,8 +1,8 @@
 /* 09X Glass: open-world engine for round 2 (terrain, roads, water, ramps, props, vehicles of every category) */
-import {buildVehicle,loadCar,createKit} from './vehicles.js?v=12';
-import {MAPS,makeNoise} from './maps.js?v=12';
-import {CATS} from './catalog.js?v=12';
-import {boatKind,planeKind,heliKind} from './kinds.js?v=12';
+import {buildVehicle,loadCar,createKit} from './vehicles.js?v=13';
+import {MAPS,makeNoise} from './maps.js?v=13';
+import {CATS} from './catalog.js?v=13';
+import {boatKind,planeKind,heliKind} from './kinds.js?v=13';
 
 const PALS={
 night:{stops:['#02010a','#0b0730','#2a0f5c','#9d2b86','#ff6fb0','#2a0e45','#07030f'],stars:1300,starY:470,fog:0x1a0d3a,fogD:.0034,hemi:[0x7f8fff,0x1b0b30,.7],dla:[0xff4fb0,2.4],dlb:[0x35e6ff,2.2],dlc:[0xffe0b0,.7],moon:1},
