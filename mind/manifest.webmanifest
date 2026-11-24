@@ -1,0 +1,14 @@
+{
+  "name": "MIND",
+  "short_name": "Mind",
+  "description": "five small regions, one self. runs on your device.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#05060e",
+  "theme_color": "#05060e",
+  "icons": [
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}
+  ]
+}
