@@ -129,3 +129,34 @@ MAPS['boats:canyon']=waterMap({nm:'Canyon Rapids',pal:'dusk',sun:true,waveAmp:.2
   boxes(W,[{x:x0,y:48,z:z0,w:20,h:12,d:160,c:0,y0:36}],rm,0,false);
   const bu=[];for(let k=0;k<60;k++){const x=W.rand(100,1700);bu.push([x,1,cz(x)+W.rand(-50,50),1.4])}W.glowPts(bu,0xffc83d,9,.9);
   return{coinSpot:()=>{for(;;){const x=W.rand(100,1700),z=cz(x)+W.rand(-60,60);if(W.ground(x,z)<-4)return[x,z,1.6]}}}}});
+
+/* ===== PLANES ===== */
+function rings(W,list,col){const T=W.T;const geo=new T.TorusGeometry(1,.06,10,40);const items=list.map(p=>{const m=new T.Mesh(geo,new T.MeshBasicMaterial({color:col,toneMapped:false}));m.position.set(p[0],p[1],p[2]);m.rotation.y=p[3]||0;m.scale.setScalar(p[4]||14);W.scene.add(m);return{m,p,got:false}});
+ W.glowPts(list.map(p=>[p[0],p[1],p[2],1.4]),col,70,.5);
+ W.upd.push((dt,S)=>{items.forEach(r=>{r.m.rotation.z+=dt;if(r.got)return;const d=Math.hypot(S.x-r.p[0],S.y-r.p[1],S.z-r.p[2]);if(d<(r.p[4]||14)){r.got=true;r.m.visible=false;W.store.set('coins',W.store.get('coins',0)+25);W.toast('Ring! +25 coins')}})})}
+const airMap=(o)=>Object.assign({size:2600,cell:14,water:null,mmR:500,startAlt:130,far:2400,dust:false,cm:2,roadBlend:6},o);
+const skyPts=(W,n,f)=>{const a=[];for(let i=0;i<n;i++)a.push(f(i));return a};
+MAPS['planes:skyline']=airMap({nm:'Neon Skyline',pal:'night',spawn:[1300,300,0],fogD:.0016,
+ H:(x,z,n)=>n(x*.004,z*.004)*10,roads:[{pts:[[100,1300],[1300,1300],[2500,1300]],w:60,glow:[0xff3da8,0x35e6ff]},{pts:[[1300,100],[1300,1300],[1300,2500]],w:60,glow:[0x35e6ff,0xff3da8]}],
+ col:(x,z)=>hex(0x15122a),
+ props:(W)=>{const T=W.T;const list=[];for(let k=0;k<260;k++){const x=W.rand(80,2500),z=W.rand(80,2500);if(Math.abs(x-1300)<70||Math.abs(z-1300)<70)continue;const hh=40+W.rng()*(Math.hypot(x-1300,z-1300)<700?340:130);list.push({x,y:hh/2,z,w:28+W.rng()*30,h:hh,d:28+W.rng()*30,c:0})}
+  boxes(W,list,new T.MeshStandardMaterial({color:0x241a58,roughness:.3,metalness:.7,emissive:0x2a1a70,emissiveIntensity:.9,envMapIntensity:1.4}));
+  const gl=[];list.forEach(o=>{for(let k=0;k<8;k++)gl.push([o.x+W.rand(-o.w/2,o.w/2),W.rand(6,o.h),o.z+(W.rng()<.5?-1:1)*(o.d/2+.3),1]);gl.push([o.x,o.h+3,o.z,2])});W.glowPts(gl,0x7fd8ff,10,.85);
+  const rl=skyPts(W,12,i=>[1300+Math.sin(i*.7)*350,160+Math.sin(i*.9)*40,300+i*180,Math.sin(i*.7)*.3,18]);rings(W,rl,0xffc83d);
+  return{coinSpot:()=>[W.rand(100,2500),W.rand(60,320),W.rand(100,2500)]}}});
+MAPS['planes:canyonrun']=airMap({nm:'Canyon Run',pal:'dusk',sun:true,spawn:[150,1100,Math.PI/2],startAlt:60,
+ H:(x,z,n)=>{const cz=1300+Math.sin(x*.003)*450,d=Math.abs(z-cz),w=130;return sm(w,w+60,d)*(130+n(x*.01,z*.01)*120)+n(x*.03,z*.03)*6},roads:[],
+ col:(x,z,h,sl,n)=>mix(hex(0xb84a2a),hex(0x6a2a22),Math.min(1,sl*1.4+n(x*.06,z*.06)*.5)),
+ props:(W)=>{const cz=x=>1300+Math.sin(x*.003)*450;const rl=skyPts(W,16,i=>{const x=250+i*140;return[x,70+Math.sin(i)*20,cz(x),Math.PI/2,16]});rings(W,rl,0xffc83d);
+  return{coinSpot:()=>{const x=W.rand(100,2500);return[x,W.rand(40,110),cz(x)+W.rand(-80,80)]}}}});
+MAPS['planes:clouds']=airMap({nm:'Cloud Rings',pal:'sunset',sun:true,spawn:[1300,300,0],startAlt:260,
+ H:(x,z,n)=>-30+n(x*.003,z*.003)*10,roads:[],col:()=>[.95,.78,.8],rough:1,
+ props:(W)=>{const T=W.T;const puffs=[];for(let k=0;k<160;k++)puffs.push({x:W.rand(0,2600),y:W.rand(0,60),z:W.rand(0,2600),sx:W.rand(80,200),sy:W.rand(18,34),sz:W.rand(80,180)});
+  W.inst(new T.SphereGeometry(1,10,8),new T.MeshBasicMaterial({color:0xffd9c8,transparent:true,opacity:.55,depthWrite:false}),puffs);
+  const rl=skyPts(W,18,i=>[1300+Math.sin(i*.6)*500,240+Math.sin(i*.8)*90,250+i*125,Math.sin(i*.6)*.4,22]);rings(W,rl,0xffc83d);
+  return{coinSpot:()=>[W.rand(100,2500),W.rand(120,360),W.rand(100,2500)]}}});
+MAPS['planes:storm']=airMap({nm:'Storm Front',pal:'storm',spawn:[1300,300,0],startAlt:200,fogD:.0034,exposure:1.2,
+ H:(x,z,n)=>n(x*.004,z*.004,4)*90-10,roads:[],col:(x,z,h,sl)=>sl>.4?hex(0x2a2a34):hex(0x1a2630),
+ props:(W)=>{const T=W.T;const rl=skyPts(W,14,i=>[1300+Math.sin(i*.8)*420,240+Math.sin(i)*70,250+i*150,Math.sin(i*.8)*.3,22]);rings(W,rl,0x9fd0ff);
+  let nt=3;W.upd.push((dt,S)=>{nt-=dt;if(nt<0){nt=2+Math.random()*5;const f=document.querySelector('#flash');if(f){f.style.background='#cfe0ff';f.style.opacity=.7;setTimeout(()=>{f.style.opacity=0;f.style.background=''},120)}}});
+  return{coinSpot:()=>[W.rand(100,2500),W.rand(120,360),W.rand(100,2500)]}}});

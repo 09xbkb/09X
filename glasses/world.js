@@ -1,8 +1,8 @@
 /* 09X Glass: open-world engine for round 2 (terrain, roads, water, ramps, props, vehicles of every category) */
-import {buildVehicle,loadCar,createKit} from './vehicles.js?v=10';
-import {MAPS,makeNoise} from './maps.js?v=10';
-import {CATS} from './catalog.js?v=10';
-import {boatKind} from './kinds.js?v=10';
+import {buildVehicle,loadCar,createKit} from './vehicles.js?v=11';
+import {MAPS,makeNoise} from './maps.js?v=11';
+import {CATS} from './catalog.js?v=11';
+import {boatKind,planeKind} from './kinds.js?v=11';
 
 const PALS={
 night:{stops:['#02010a','#0b0730','#2a0f5c','#9d2b86','#ff6fb0','#2a0e45','#07030f'],stars:1300,starY:470,fog:0x1a0d3a,fogD:.0034,hemi:[0x7f8fff,0x1b0b30,.7],dla:[0xff4fb0,2.4],dlb:[0x35e6ff,2.2],dlc:[0xffe0b0,.7],moon:1},
@@ -89,7 +89,7 @@ export async function createWorld(THREE,host,mode0,FX,ctx){
   for(let i=x0;i<=x1;i++)for(let j=z0;j<=z1;j++){const k=i+','+j;let a=COLH.get(k);if(!a){a=[];COLH.set(k,a)}a.push(c)}};
 
  /* ---------- world helper object handed to map defs ---------- */
- const upd=[];const W={T,scene,rng,rand,noise,mk,glowTex,track,ground,roadNear,roads,ramps,addCol,upd,low,PAL,SIZE,HALF,smooth,cfg,cat,tier,kit:createKit(T),host,R};
+ const upd=[];const W={store,toast,T,scene,rng,rand,noise,mk,glowTex,track,ground,roadNear,roads,ramps,addCol,upd,low,PAL,SIZE,HALF,smooth,cfg,cat,tier,kit:createKit(T),host,R};
  const K=W.kit,M=K.M;
  W.inst=(geo,mat,list,opts={})=>{const im=new T.InstancedMesh(geo,mat,list.length);const d=new T.Object3D(),c=new T.Color();
   list.forEach((o,n)=>{d.position.set(o.x,o.y||0,o.z);d.rotation.set(o.rx||0,o.ry||0,o.rz||0);d.scale.set(o.sx||o.s||1,o.sy||o.s||1,o.sz||o.s||1);d.updateMatrix();im.setMatrixAt(n,d.matrix);if(o.c!==undefined){c.set(o.c);im.setColorAt(n,c)}});
@@ -366,5 +366,5 @@ export async function createWorld(THREE,host,mode0,FX,ctx){
  g.glb=!!model.userData.glb;g.debug={S,W,API,car,cam,ground,surf};
  return g;
 }
-const WORLD_KINDS={boat:boatKind};
+const WORLD_KINDS={boat:boatKind,plane:planeKind};
 export{WORLD_KINDS};

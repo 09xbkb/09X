@@ -32,3 +32,31 @@ export function boatKind(A){
   const big=PH.vmax;
   return{spd:Math.abs(S.sp)*2.4,vmax:PH.vmax,fovK:Math.min(1,Math.abs(S.sp)/PH.vmax),camD:hullLen*1.5+4,camH:hullLen*.22+2.4,camY:S.y,fov:62}
  }}}
+
+export function planeKind(A){
+ const {T,S,W,PH,model,car,emit,flash,VLEN,ground,DEF}=A;let init=false;S.thr=.6;S.sp=PH.vmin*1.4;
+ return{step(dt,I){
+  if(!init){init=true;S.y=ground(S.x,S.z)+(DEF.startAlt||140)}
+  const go=S.started;
+  if(go){S.thr=Math.max(0,Math.min(1,S.thr+(I.pad?(I.rt-I.lt)*.5*dt:0)));if(!I.pad)S.thr=.75}
+  let roll=I.st,pit=I.pad?I.py:(I.touchUp?1:I.touchDown?-1:I.py);if(!I.pad&&!I.touchUp&&!I.touchDown&&I.py===0)pit=0;
+  if(!go){roll=0;pit=0}
+  S.rollA+=((roll*1.15)-S.rollA)*Math.min(1,dt*PH.roll*.9);
+  S.pitchA+=((pit*.75)-S.pitchA+(pit===0?-S.pitchA*0:0))*Math.min(1,dt*(pit===0?.6:1.6)) ;
+  if(pit===0)S.pitchA*=1-Math.min(1,dt*.4);
+  S.pitchA=Math.max(-1.1,Math.min(1.1,S.pitchA));
+  const tgt=PH.vmin+(PH.vmax-PH.vmin)*S.thr;
+  S.sp+=((tgt-S.sp)*.5*Math.min(1,PH.acc/14)-Math.sin(S.pitchA)*18)*dt;S.sp=Math.max(PH.vmin*.6,S.sp);
+  if(S.sp<PH.vmin*.85)S.pitchA-=(PH.vmin*.85-S.sp)*.03*dt*60*.05;
+  S.th-=(Math.sin(S.rollA)*PH.turn*1.25+I.yawIn*.6)*dt;
+  const ch=Math.cos(S.pitchA);S.vx=Math.sin(S.th)*S.sp*ch;S.vz=Math.cos(S.th)*S.sp*ch;S.vy=Math.sin(S.pitchA)*S.sp;
+  S.x+=S.vx*dt;S.z+=S.vz*dt;S.y+=S.vy*dt;
+  A.collide(VLEN*.35);
+  const gy=A.surf(S.x,S.z,S.y)+2.2;
+  if(S.y<gy){const imp=Math.max(0,-S.vy);S.y=gy;if(S.pitchA<0)S.pitchA=.15;if(imp>6){S.sp*=.6;flash();A.shake=.8;S.hit=.4}}
+  if(S.y>420){S.y=420;if(S.pitchA>0)S.pitchA*=.9}
+  car.position.set(S.x,S.y,S.z);car.rotation.set(-S.pitchA,S.th,S.rollA);
+  (model.userData.props||[]).forEach(p=>{p.rotation.z+=S.sp*dt*3});
+  if(S.sp>PH.vmin*1.2)emit(S.x-Math.sin(S.th)*VLEN*.5,S.y,S.z-Math.cos(S.th)*VLEN*.5,0,0,0);
+  return{spd:S.sp*2.4,vmax:PH.vmax,fovK:Math.min(1,(S.sp-PH.vmin)/(PH.vmax-PH.vmin)),camD:VLEN*1.8+7,camH:2.6+VLEN*.15,camY:S.y,lookY:S.y,lookDy:S.pitchA*9,fov:64,camRate:5,camRoll:-S.rollA*.12}
+ }}}
