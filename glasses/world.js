@@ -1,7 +1,8 @@
 /* 09X Glass: open-world engine for round 2 (terrain, roads, water, ramps, props, vehicles of every category) */
-import {buildVehicle,loadCar,createKit} from './vehicles.js?v=9';
-import {MAPS,makeNoise} from './maps.js?v=9';
-import {CATS} from './catalog.js?v=9';
+import {buildVehicle,loadCar,createKit} from './vehicles.js?v=10';
+import {MAPS,makeNoise} from './maps.js?v=10';
+import {CATS} from './catalog.js?v=10';
+import {boatKind} from './kinds.js?v=10';
 
 const PALS={
 night:{stops:['#02010a','#0b0730','#2a0f5c','#9d2b86','#ff6fb0','#2a0e45','#07030f'],stars:1300,starY:470,fog:0x1a0d3a,fogD:.0034,hemi:[0x7f8fff,0x1b0b30,.7],dla:[0xff4fb0,2.4],dlb:[0x35e6ff,2.2],dlc:[0xffe0b0,.7],moon:1},
@@ -302,7 +303,7 @@ export async function createWorld(THREE,host,mode0,FX,ctx){
  const resize=()=>{R.setSize(host.clientWidth,host.clientHeight);if(comp)comp.setSize(host.clientWidth,host.clientHeight);cam.aspect=host.clientWidth/host.clientHeight;cam.updateProjectionMatrix();W.smokeM.uniforms.scale.value=host.clientHeight*pr/2};
  addEventListener('resize',resize);addEventListener('orientationchange',resize);
  g.recal=()=>{recalTilt();toast('Steering re-centered')};
- g.begin=()=>{if(g.started)return;g.started=true;$('#startov').classList.add('hidden');recalTilt();el.tip.style.opacity=1;el.tip.textContent=(CAT.hint&&CAT.hint(!!gp()))||'';setTimeout(()=>el.tip.style.opacity=0,8000)};
+ g.begin=()=>{if(g.started)return;g.started=true;S.started=true;$('#startov').classList.add('hidden');recalTilt();el.tip.style.opacity=1;el.tip.textContent=(CAT.hint&&CAT.hint(!!gp()))||'';setTimeout(()=>el.tip.style.opacity=0,8000)};
  g.setPaused=p=>{g.paused=p};g.cat=cat;g.hintText=()=>'';
  let lastI={};
  function step(dt){
@@ -365,5 +366,5 @@ export async function createWorld(THREE,host,mode0,FX,ctx){
  g.glb=!!model.userData.glb;g.debug={S,W,API,car,cam,ground,surf};
  return g;
 }
-const WORLD_KINDS={};
+const WORLD_KINDS={boat:boatKind};
 export{WORLD_KINDS};

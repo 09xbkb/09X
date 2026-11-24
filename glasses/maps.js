@@ -85,3 +85,47 @@ MAPS['trucks:mud']={nm:'Mud Yard',size:1500,pal:'sunset',cell:7,water:null,sun:t
 /* switchback road for Mountain Haul (generated) */
 (()=>{const pts=[];const cx=850,cz=850;let a=0;for(let i=0;i<60;i++){const t=i/59;const r=760-t*620;a=t*Math.PI*5.5+.8;const wob=Math.sin(i*1.3)*40;pts.push([cx+Math.cos(a)*(r+wob),cz+Math.sin(a)*(r+wob)])}
  MAPS['trucks:mountain'].roads=[{pts:pts.map((p,i)=>{const t=i/(pts.length-1);return [p[0],p[1],0]}),w:16,glow:[0xffa13d,0xffa13d],auto:true}];const q=MAPS['trucks:mountain'].roads[0].pts;MAPS['trucks:mountain'].spawn=[q[0][0],q[0][1],Math.atan2(q[1][0]-q[0][0],q[1][1]-q[0][1])];})();
+
+/* ===== BOATS ===== */
+const bump=(x,z,cx,cz,r,h)=>{const d=Math.hypot(x-cx,z-cz)/r;return d<1?h*(1-d*d)*(1-d*d):0};
+function palms(W,list){const T=W.T;const tm=new T.MeshStandardMaterial({color:0x5a3a20,roughness:1}),lm=new T.MeshStandardMaterial({color:0x1f8a4a,roughness:.8,emissive:0x052010,side:T.DoubleSide});
+ W.inst(new T.CylinderGeometry(.25,.4,1,5),tm,list.map(o=>({x:o.x,y:o.y+o.h/2,z:o.z,sy:o.h,rz:Math.sin(o.x)*.12})));
+ W.inst(new T.ConeGeometry(1,1,7,1,true),lm,list.map(o=>({x:o.x,y:o.y+o.h,z:o.z,sx:o.h*.7,sy:o.h*.35,sz:o.h*.7,ry:o.z})));}
+const waterMap=(o)=>Object.assign({size:1800,cell:9,water:0,mmLand:true,mmR:300,dust:false,rough:.95,roadBlend:6},o);
+MAPS['boats:harbor']=waterMap({nm:'Neon Harbor',pal:'night',waveAmp:.6,waterDeep:0x04102e,waterShallow:0x0d4a80,waterGlint:0xff4fb8,spawn:[700,900,Math.PI/2],
+ H:(x,z,n)=>{let h=-9;if(x>1500)h=1.2+n(x*.02,z*.02)*.8;h=Math.max(h,-9+bump(x,z,1100,500,160,11),-9+bump(x,z,1000,1300,190,11),-9+bump(x,z,500,300,110,10.5));if(x>1450&&x<=1500)h=-9+(x-1450)/50*10.2;return h},
+ roads:[],col:(x,z,h)=>h<-1?hex(0x0b1030):h<.4?hex(0x3a3050):mix(hex(0x2a2a3c),hex(0x3c3a52),(x*.07%1+1)%1),
+ props:(W)=>{const T=W.T;const list=[];for(let k=0;k<60;k++){const z=40+k*29,hh=20+W.rng()*90;list.push({x:1560+W.rng()*180,y:hh/2,z,w:24,h:hh,d:22,c:0})}
+  boxes(W,list,new T.MeshStandardMaterial({color:0x2a2060,roughness:.3,metalness:.7,emissive:0x2a1a60,emissiveIntensity:.9,envMapIntensity:1.4}));
+  const gl=[];list.forEach(o=>{for(let k=0;k<6;k++)gl.push([o.x-o.w/2-.3,W.rand(4,o.h),o.z+W.rand(-9,9),1])});W.glowPts(gl,0xff8ad0,7,.9);
+  const bu=[];for(let k=0;k<50;k++){const x=W.rand(100,1400),z=W.rand(100,1700);if(W.ground(x,z)<-4)bu.push([x,.8,z,1.4])}W.glowPts(bu,0xff3da8,9,.95);
+  for(let k=0;k<10;k++){const x=200+k*110,z=W.rand(300,1500);if(W.ground(x,z)<-4){const l=[{x,y:.1,z:z,s:3}];W.glowPts([[x,1,z,1.5]],0x35e6ff,14,.9)}}
+  return{coinSpot:()=>{for(;;){const x=W.rand(60,1450),z=W.rand(60,1740);if(W.ground(x,z)<-3)return[x,z,1.6]}}}}});
+MAPS['boats:lagoon']=waterMap({nm:'Lagoon Islands',pal:'sunset',sun:true,waveAmp:.35,waterDeep:0x063a52,waterShallow:0x19a0a8,waterGlint:0xffa060,spawn:[900,650,.3],
+ H:(x,z,n)=>{let h=-8;[[500,500,160],[1300,600,190],[1200,1300,170],[400,1250,150],[900,300,110],[900,1550,130]].forEach(i=>{h=Math.max(h,-8+bump(x,z,i[0],i[1],i[2],14))});h=Math.max(h,-8+bump(x,z,880,900,60,26));return h+n(x*.03,z*.03)*.8*(h>-7?1:0)},
+ roads:[],col:(x,z,h,sl)=>h<-.5?hex(0x1a6a7a):h<1.5?hex(0xe8d29a):sl>.5?hex(0x6a5a50):mix(hex(0x2e8a4a),hex(0x4aa05a),(x*.05%1+1)%1),
+ props:(W)=>{const pl=scatter(W,260,(x,z,y)=>({x,y,z,h:W.rand(5,9)}),(x,z)=>{const h=W.ground(x,z);return h>1&&h<5});palms(W,pl);
+  const T=W.T;const rm=new T.MeshStandardMaterial({color:0x7a5a50,roughness:.9,flatShading:true});const ar=[{x:880,y:12,z:858,w:12,h:26,d:14,c:0},{x:880,y:12,z:942,w:12,h:26,d:14,c:0},{x:880,y:25,z:900,w:12,h:8,d:100,c:0}];
+  ar[2].y0=21;boxes(W,ar.slice(0,2),rm);boxes(W,[ar[2]],rm,0,false);
+  return{coinSpot:()=>{for(;;){const x=W.rand(60,1740),z=W.rand(60,1740);if(W.ground(x,z)<-2)return[x,z,1.6]}}}}});
+MAPS['boats:storm']=waterMap({nm:'Storm Coast',pal:'storm',waveAmp:3.2,foam:.8,waterDeep:0x050c18,waterShallow:0x16324a,waterGlint:0x8aa8e0,spawn:[700,900,Math.PI/2],fogD:.0042,exposure:1.2,
+ H:(x,z,n)=>{let h=-10;if(x>1450)h=3+n(x*.02,z*.02)*6;h=Math.max(h,-10+bump(x,z,1100,900,150,24),-10+bump(x,z,700,300,90,14),-10+bump(x,z,600,1450,100,14));if(x>1380&&x<=1450)h=-10+(x-1380)/70*13;return h},
+ roads:[],col:(x,z,h,sl)=>h<0?hex(0x0a1018):sl>.5?hex(0x3a3a46):hex(0x24323a),
+ props:(W)=>{const T=W.T;const g=new T.Group();g.position.set(1100,W.ground(1100,900),900);
+  const m=new T.MeshStandardMaterial({color:0xe8e8f0,roughness:.5});const rd=new T.MeshStandardMaterial({color:0xcc2a2a,roughness:.5});
+  [[0,6,1],[1,16,1],[2,26,1],[3,36,1]].forEach(([i,y])=>{const c=new T.Mesh(new T.CylinderGeometry(4-i*.5,4.6-i*.5,10,16),i%2?rd:m);c.position.y=y;g.add(c)});
+  const lamp=new T.Mesh(new T.SphereGeometry(3,12,12),new T.MeshBasicMaterial({color:0xfff2b0}));lamp.position.y=46;g.add(lamp);W.scene.add(g);W.addCol({x:1100,z:900,r:6,top:80});
+  const beam=new T.Sprite(new T.SpriteMaterial({map:W.glowTex,color:0xfff2b0,transparent:true,blending:T.AdditiveBlending,depthWrite:false}));beam.scale.set(160,30,1);W.scene.add(beam);
+  W.upd.push((dt,S)=>{const a=S.t*.8;beam.position.set(1100+Math.cos(a)*70,W.ground(1100,900)+46,900+Math.sin(a)*70)});
+  const bu=[];for(let k=0;k<40;k++){const x=W.rand(100,1380),z=W.rand(100,1700);if(W.ground(x,z)<-6)bu.push([x,1.5,z,1.6])}W.glowPts(bu,0xff5a3a,10,.95);
+  const rocks=scatter(W,40,(x,z,y)=>({x,y:y+1,z,s:W.rand(4,10)}),(x,z)=>{const h=W.ground(x,z);return h>-3&&h<2});
+  W.inst(new T.DodecahedronGeometry(1),new T.MeshStandardMaterial({color:0x4a4a55,flatShading:true}),rocks);rocks.forEach(p=>W.addCol({x:p.x,z:p.z,r:p.s*.8,top:p.y+p.s}));
+  return{coinSpot:()=>{for(;;){const x=W.rand(60,1350),z=W.rand(60,1740);if(W.ground(x,z)<-5)return[x,z,1.8]}}}}});
+MAPS['boats:canyon']=waterMap({nm:'Canyon Rapids',pal:'dusk',sun:true,waveAmp:.25,foam:.6,waterDeep:0x2a1a2a,waterShallow:0x7a4a40,waterGlint:0xffa060,spawn:[160,1150,Math.PI/2],exposure:1.1,
+ H:(x,z,n)=>{const cz=900+Math.sin(x*.0045)*300+Math.sin(x*.012)*60,d=Math.abs(z-cz),w=75+Math.sin(x*.009)*20;const wall=sm(w,w+25,d)*(55+n(x*.02,z*.02)*50);return -7+wall+n(x*.05,z*.05)*2*sm(w,w+25,d)},
+ roads:[],col:(x,z,h,sl,n)=>h<-.6?hex(0x4a2a2a):mix(hex(0xb84a2a),hex(0x7a2a22),Math.min(1,sl*1.5+n(x*.08,z*.08)*.4)),
+ props:(W)=>{const T=W.T;const rm=new T.MeshStandardMaterial({color:0xa8442a,roughness:.9,flatShading:true});
+  const cz=x=>900+Math.sin(x*.0045)*300+Math.sin(x*.012)*60;const x0=900,z0=cz(x0);boxes(W,[{x:x0,y:20,z:z0-70,w:20,h:56,d:20,c:0},{x:x0,y:20,z:z0+70,w:20,h:56,d:20,c:0}].map(o=>o),rm);
+  boxes(W,[{x:x0,y:48,z:z0,w:20,h:12,d:160,c:0,y0:36}],rm,0,false);
+  const bu=[];for(let k=0;k<60;k++){const x=W.rand(100,1700);bu.push([x,1,cz(x)+W.rand(-50,50),1.4])}W.glowPts(bu,0xffc83d,9,.9);
+  return{coinSpot:()=>{for(;;){const x=W.rand(100,1700),z=cz(x)+W.rand(-60,60);if(W.ground(x,z)<-4)return[x,z,1.6]}}}}});
