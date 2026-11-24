@@ -279,7 +279,7 @@ export async function createNeon(THREE,host,mode0,FX,ctx){
     void main(){vec3 p=position;p.y-=time*26.;vec3 q=mod(p-cam+vec3(30.,20.,30.),vec3(60.,40.,60.))-vec3(30.,20.,30.)+cam;
      q.y+=0.;vec3 tail=vec3(0.,1.,0.)*1.1+vel*.035;q+=tail*end;vec4 mv=viewMatrix*vec4(q,1.);gl_Position=projectionMatrix*mv;vA=(1.-end)*.5+.1;vA*=smoothstep(40.,5.,length(q-cam))*step(.1,q.y);}`,
    fragmentShader:`varying float vA;void main(){gl_FragColor=vec4(vec3(.62,.72,1.)*1.2,vA*.55);}`}));
-  const l=new THREE.LineSegments(track(g),m);l.frustumCulled=false;scene.add(l)}
+  const l=new THREE.LineSegments(track(g),m);l.frustumCulled=false;l.visible=false;scene.add(l)}
 
  // coins and gems
  const NC=240,NG=36,dummy=new THREE.Object3D();
