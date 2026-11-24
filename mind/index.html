@@ -364,13 +364,13 @@ const Memory = {
     const t = text.trim(), low = t.toLowerCase();
     const found = [];
     let m;
-    if ((m = low.match(/(?:my name is|call me|i'm|im)\s+([a-z]{2,20})\b/)) && !/^(good|fine|ok|okay|sure|not|so|really|just|here|done|ready|tired|bored|hungry|sad|happy|sorry|busy)$/.test(m[1]))
+    if ((m = low.match(/(?:my name is|call me|i'm|im)\s+([a-z]{2,20})\b/)) && !/^(good|fine|ok|okay|sure|not|so|really|just|here|done|ready|tired|bored|hungry|sad|happy|sorry|busy|into|also|very|still|already|feeling|actually|currently)$/.test(m[1]))
       found.push({k: 'user.name', v: m[1], say: `your name is ${m[1]}`});
     if ((m = low.match(/(?:i like|i love|i'm into|im into)\s+(.{2,60})/)))
       found.push({k: 'user.likes.' + m[1].slice(0, 24), v: m[1], say: `you like ${m[1]}`});
     if ((m = low.match(/(?:i have|i've got|i got)\s+(a|an)?\s*(.{2,50})/)))
       found.push({k: 'user.has.' + m[2].slice(0, 24), v: m[2], say: `you have ${m[2]}`});
-    if ((m = low.match(/remember (?:that |when )?(.{2,80})/)))
+    if (!low.endsWith('?') && (m = low.match(/(?:^|[.!]\s)remember (?:that |when )?(.{2,80})/)))
       found.push({k: 'user.asked.' + Date.now(), v: m[1], say: `you asked me to remember: ${m[1]}`});
     return found;
   },
