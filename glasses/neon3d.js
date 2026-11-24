@@ -344,7 +344,7 @@ const PHYS=({starter:{vmax:58,vd:48,acc:24,brk:75,grip:7.5,dgrip:1.3},m4:{vmax:6
   carBody.add(wrap);glbOK=true;
  }catch(err){console.warn('car model fallback',err);
   bodyMat=mkPaint(paintCol);const dark=new THREE.MeshStandardMaterial({color:0x090912,metalness:.7,roughness:.4});
-  const add=(g,mt,x,y,z)=>{const mm=new THREE.Mesh(track(g),mt);mm.position.set(x,y,z);carBody.add(mm)};
+  const add=(g,mt,x,y,z)=>{const mm=new THREE.Mesh(track(g),mt);mm.position.set(x,y,z);carBody.add(mm);return mm};
   const add2=add;
   const mkW=(x,z,rad,wid)=>{const g=new THREE.CylinderGeometry(rad,rad,wid,20);g.rotateZ(Math.PI/2);const w=add2(g,dark,x,rad,z);wheels.push(w);if(z>0)fronts.push(w)};
   const profCar=(pts,dep)=>{const s=new THREE.Shape();pts.forEach((p,i)=>i?s.lineTo(p[0],p[1]):s.moveTo(p[0],p[1]));const g=new THREE.ExtrudeGeometry(s,{depth:dep,bevelEnabled:true,bevelSize:.08,bevelThickness:.1,bevelSegments:2,curveSegments:6});g.rotateY(-Math.PI/2);g.translate(dep/2,0,0);return track(g)};

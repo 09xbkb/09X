@@ -203,6 +203,9 @@ h1{font-weight:300;letter-spacing:.2em;font-size:calc(var(--u)*5);color:#dfe9ff}
 #startov{background:radial-gradient(ellipse at center,rgba(2,5,16,.35),rgba(2,5,16,.78))}
 #startov h2{font-weight:800;font-style:italic;filter:drop-shadow(0 0 calc(var(--u)*2.5) rgba(76,201,255,.6))}
 #gameHost canvas{image-rendering:auto}
+#app.ingame #status,#app.ingame #hint{display:none!important}
+#app.ingame .screen{top:0!important;z-index:9}
+#app.ingame .screen.pad{padding-top:calc(var(--u)*4)}
 </style>
 </head>
 <body>
@@ -466,6 +469,7 @@ function show(name){
  $$('.screen').forEach(s=>s.classList.add('hidden'));screen=name;const el=$('#'+name);el.classList.remove('hidden');el.scrollTop=0;
  if(name==='home')buildHome();if(name==='library')buildLibrary();if(name==='settings')buildSettings();
  if(name==='ncdmenu')buildNcdMenu();if(name==='garage')buildGarage();if(name==='maps')buildMaps();if(name==='gsettings')buildGSettings();
+ document.getElementById('app').classList.toggle('ingame',['ncdmenu','garage','maps','gsettings'].includes(name));
  focusEl=null;ensureFocus();
 }
 function closeOverlays(){layers.forEach(l=>l.classList.add('hidden'));layers=[];
@@ -608,7 +612,7 @@ $('#startov').addEventListener('pointerdown',e=>{if(game&&!game.started){enableT
 
 /* ---------- Neon City Drive ---------- */
 let exP=null;const getExtra=()=>exP||(exP=Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/loaders/DRACOLoader.js'),import('three/addons/postprocessing/ShaderPass.js'),import('three/addons/objects/Reflector.js')].map(p=>p.catch(e=>{console.warn('extra off',e);return null}))).then(m=>({GLTFLoader:m[0]&&m[0].GLTFLoader,DRACOLoader:m[1]&&m[1].DRACOLoader,ShaderPass:m[2]&&m[2].ShaderPass,Reflector:m[3]&&m[3].Reflector})));
-async function createNeon(THREE,host,mode0,FX){const X=await getExtra();const m=await import('./neon3d.js?v=4');return m.createNeon(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:arguments[4]||{}})}
+async function createNeon(THREE,host,mode0,FX){const X=await getExtra();const m=await import('./neon3d.js?v=6');return m.createNeon(THREE,host,mode0,FX,{cfg,store,$,P,KEYS,toast,tilt,recalTilt,isOri:()=>oriOn,X,opts:arguments[4]||{}})}
 
 /* ---------- boot ---------- */
 function mainLoop(now){requestAnimationFrame(mainLoop);pollPad(now)}
