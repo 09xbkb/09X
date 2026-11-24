@@ -1,5 +1,5 @@
-const V='glass-v4';
-self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(V).then(c=>c.addAll(['./','index.html','manifest.webmanifest','icon.svg','a-bg.js','a-neon.js','a-traffic.js','a-chill.js','a-library.js','neon3d.js'])).catch(()=>{}))});
+const V='glass-v5';
+self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(V).then(c=>c.addAll(['./','index.html','manifest.webmanifest','icon.svg','a-bg.js','a-neon.js','a-traffic.js','a-chill.js','a-library.js','a-v4.js','neon3d.js'])).catch(()=>{}))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',e=>{
  const r=e.request;if(r.method!=='GET')return;
